@@ -1,0 +1,164 @@
+{
+  "plugin_id": "products",
+  "name": "Products Manager",
+  "name_es": "Gestión de Productos",
+  "version": "1.0.0",
+  "description": "Comprehensive product and inventory management plugin with multi-language support, category management, and CSV/Excel import/export",
+  "description_es": "Plugin completo para gestión de productos e inventario con soporte multiidioma, gestión de categorías, e importación/exportación de CSV y Excel",
+  "author": "CPOS Team",
+  "author_email": "plugins@cpos.app",
+  "license": "MIT",
+  "homepage": "https://github.com/cpos-plugins/cpos-plugin-products",
+  "repository": "https://github.com/cpos-plugins/cpos-plugin-products.git",
+  "documentation": "https://docs.cpos.app/plugins/products",
+
+  "compatibility": {
+    "min_cpos_version": "1.0.0",
+    "max_cpos_version": "2.0.0",
+    "django_version": "5.1.x"
+  },
+
+  "dependencies": {
+    "python": [
+      "Pillow>=10.0.0",
+      "openpyxl>=3.1.0"
+    ],
+    "plugins": []
+  },
+
+  "features": {
+    "i18n": true,
+    "languages": ["en", "es"],
+    "api": true,
+    "webhooks": false,
+    "background_tasks": false,
+    "supports_images": true,
+    "supports_export": true,
+    "supports_import": true
+  },
+
+  "permissions": [
+    "products.view_product",
+    "products.add_product",
+    "products.change_product",
+    "products.delete_product",
+    "products.view_category",
+    "products.add_category",
+    "products.change_category",
+    "products.delete_category"
+  ],
+
+  "menu": {
+    "label": "Products",
+    "label_es": "Productos",
+    "icon": "cube-outline",
+    "url": "/products/",
+    "order": 10
+  },
+
+  "settings": {
+    "allow_negative_stock": {
+      "type": "boolean",
+      "default": false,
+      "label": "Allow Negative Stock",
+      "label_es": "Permitir Stock Negativo",
+      "description": "Allow products to have negative stock values",
+      "description_es": "Permitir que los productos tengan valores de stock negativos"
+    },
+    "default_currency": {
+      "type": "string",
+      "default": "USD",
+      "choices": ["USD", "EUR", "MXN"],
+      "label": "Default Currency",
+      "label_es": "Moneda Predeterminada",
+      "description": "Default currency for product pricing",
+      "description_es": "Moneda predeterminada para precios de productos"
+    },
+    "low_stock_alert_enabled": {
+      "type": "boolean",
+      "default": true,
+      "label": "Low Stock Alerts",
+      "label_es": "Alertas de Stock Bajo",
+      "description": "Send alerts when products reach low stock threshold",
+      "description_es": "Enviar alertas cuando los productos alcancen el umbral de stock bajo"
+    }
+  },
+
+  "api_endpoints": [
+    {
+      "path": "/api/list/",
+      "method": "GET",
+      "description": "List products with pagination and search"
+    },
+    {
+      "path": "/api/categories/",
+      "method": "GET",
+      "description": "List active categories"
+    },
+    {
+      "path": "/create/",
+      "method": "POST",
+      "description": "Create a new product"
+    },
+    {
+      "path": "/edit/<int:pk>/",
+      "method": "POST",
+      "description": "Update an existing product"
+    },
+    {
+      "path": "/delete/<int:pk>/",
+      "method": "POST",
+      "description": "Delete a product"
+    },
+    {
+      "path": "/export/csv/",
+      "method": "GET",
+      "description": "Export products to CSV"
+    },
+    {
+      "path": "/import/csv/",
+      "method": "POST",
+      "description": "Import products from CSV"
+    },
+    {
+      "path": "/import/excel/",
+      "method": "POST",
+      "description": "Import products from Excel"
+    }
+  ],
+
+  "database": {
+    "migrations": true,
+    "models": ["Product", "Category"]
+  },
+
+  "static_files": {
+    "css": ["products/css/products.css"],
+    "js": [
+      "products/js/avatar.js",
+      "products/js/products.js"
+    ]
+  },
+
+  "media_uploads": {
+    "products": "products/images/",
+    "categories": "categories/"
+  },
+
+  "changelog": {
+    "1.0.0": {
+      "date": "2025-01-04",
+      "changes": [
+        "Initial release",
+        "Product CRUD operations with image support",
+        "Category management with images and colors",
+        "Multi-language support (English/Spanish)",
+        "CSV/Excel import/export functionality",
+        "Avatar system with letter fallback",
+        "Search and pagination",
+        "Stock management with low stock alerts",
+        "Profit margin calculation"
+      ]
+    }
+  }
+}

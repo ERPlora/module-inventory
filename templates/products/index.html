@@ -1,0 +1,263 @@
+{% extends "core/app_base.html" %}
+{% load static %}
+
+{% block title %}Productos - CPOS Hub{% endblock %}
+
+{% block page_title %}Productos{% endblock %}
+
+{% block extra_head %}
+<!-- Products plugin uses Tailwind CSS (loaded in base template) -->
+<style>
+    /* Search input focus styles */
+    .search-input:focus {
+        outline: none;
+        border-color: var(--ion-color-primary);
+        box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div x-data="productsApp()" x-init="init()" class="p-4">
+    <!-- Header with Search and Actions -->
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <!-- Search Bar -->
+        <div class="flex-1 min-w-[250px] max-w-md relative">
+            <ion-icon name="search-outline"
+                class="absolute left-3 top-1/2 -translate-y-1/2"
+                style="color: var(--ion-color-medium); pointer-events: none;"></ion-icon>
+            <input
+                type="text"
+                x-model="searchQuery"
+                @input="searchProducts()"
+                placeholder="Buscar productos..."
+                class="search-input w-full h-10 pl-10 pr-3 rounded-lg"
+                style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);">
+        </div>
+        <!-- Action Buttons -->
+        <div class="flex gap-2 flex-wrap">
+            <ion-button @click="exportCSV()">
+                <ion-icon slot="start" name="download-outline"></ion-icon>
+                Exportar CSV
+            </ion-button>
+            <ion-button @click="openImportModal('csv')">
+                <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+                Importar CSV
+            </ion-button>
+            <ion-button @click="openImportModal('excel')">
+                <ion-icon slot="start" name="document-outline"></ion-icon>
+                Importar Excel
+            </ion-button>
+            <ion-button color="primary" @click="openProductModal()">
+                <ion-icon slot="start" name="add-outline"></ion-icon>
+                Nuevo Producto
+            </ion-button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Total Products -->
+        <ion-card class="m-0">
+            <ion-card-content class="p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                        <ion-icon name="cube-outline" class="text-2xl text-primary"></ion-icon>
+                    </div>
+                    <div>
+                        <div class="text-sm text-medium">Total Productos</div>
+                        <div class="text-2xl font-semibold" x-text="stats.total"></div>
+                    </div>
+                </div>
+            </ion-card-content>
+        </ion-card>
+
+        <!-- In Stock -->
+        <ion-card class="m-0">
+            <ion-card-content class="p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
+                        <ion-icon name="checkmark-circle-outline" class="text-2xl text-success"></ion-icon>
+                    </div>
+                    <div>
+                        <div class="text-sm text-medium">En Stock</div>
+                        <div class="text-2xl font-semibold" x-text="stats.in_stock"></div>
+                    </div>
+                </div>
+            </ion-card-content>
+        </ion-card>
+
+        <!-- Low Stock -->
+        <ion-card class="m-0">
+            <ion-card-content class="p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center">
+                        <ion-icon name="alert-circle-outline" class="text-2xl text-warning"></ion-icon>
+                    </div>
+                    <div>
+                        <div class="text-sm text-medium">Stock Bajo</div>
+                        <div class="text-2xl font-semibold" x-text="stats.low_stock"></div>
+                    </div>
+                </div>
+            </ion-card-content>
+        </ion-card>
+
+        <!-- Total Value -->
+        <ion-card class="m-0">
+            <ion-card-content class="p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
+                        <ion-icon name="cash-outline" class="text-2xl text-success"></ion-icon>
+                    </div>
+                    <div>
+                        <div class="text-sm text-medium">Valor Total</div>
+                        <div class="text-2xl font-semibold" x-text="'$' + stats.value.toFixed(2)"></div>
+                    </div>
+                </div>
+            </ion-card-content>
+        </ion-card>
+    </div>
+
+    <!-- Products Table -->
+    <ion-card class="mb-4">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+                <thead style="background: var(--ion-color-step-50);">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold">Producto</th>
+                            <th class="px-4 py-3 text-left font-semibold">SKU</th>
+                            <th class="px-4 py-3 text-left font-semibold">Categoría</th>
+                            <th class="px-4 py-3 text-right font-semibold">Precio</th>
+                            <th class="px-4 py-3 text-right font-semibold">Costo</th>
+                            <th class="px-4 py-3 text-right font-semibold">Stock</th>
+                            <th class="px-4 py-3 text-right font-semibold">Margen</th>
+                            <th class="px-4 py-3 text-right font-semibold">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="products.length === 0">
+                            <tr>
+                                <td colspan="8" class="p-8 text-center" style="color: var(--ion-color-medium);">
+                                    No hay productos para mostrar
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="product in products" :key="product.id">
+                            <tr style="border-bottom: 1px solid var(--ion-border-color);" class="hover:bg-[var(--ion-color-step-50)]">
+                                <!-- Product -->
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div x-html="createAvatar({
+                                            image: product.image !== '/static/products/images/placeholder.png' ? product.image : null,
+                                            initial: product.initial,
+                                            name: product.name,
+                                            color: generateColorFromText(product.name),
+                                            size: 'medium'
+                                        })"></div>
+                                        <span class="font-medium" x-text="product.name"></span>
+                                    </div>
+                                </td>
+                                <!-- SKU -->
+                                <td class="px-4 py-3">
+                                    <code class="px-2 py-1 rounded text-sm" style="background: var(--ion-color-step-50);"
+                                        x-text="product.sku"></code>
+                                </td>
+                                <!-- Category -->
+                                <td class="px-4 py-3">
+                                    <ion-chip class="m-0">
+                                        <ion-label x-text="product.category"></ion-label>
+                                    </ion-chip>
+                                </td>
+                                <!-- Price -->
+                                <td class="px-4 py-3 text-right font-medium"
+                                    x-text="'$' + product.price.toFixed(2)"></td>
+                                <!-- Cost -->
+                                <td class="px-4 py-3 text-right"
+                                    x-text="'$' + product.cost.toFixed(2)"></td>
+                                <!-- Stock -->
+                                <td class="px-4 py-3 text-right">
+                                    <ion-chip :color="product.is_low_stock ? 'danger' : 'success'" class="m-0">
+                                        <ion-label x-text="product.stock"></ion-label>
+                                    </ion-chip>
+                                </td>
+                                <!-- Margin -->
+                                <td class="px-4 py-3 text-right">
+                                    <span :style="'color: ' + (product.profit_margin > 0 ? 'var(--ion-color-success)' : 'var(--ion-color-danger)')"
+                                        x-text="product.profit_margin.toFixed(1) + '%'"></span>
+                                </td>
+                                <!-- Actions -->
+                                <td class="px-4 py-3 text-right">
+                                    <ion-button size="small" fill="clear" @click="openProductModal(product)">
+                                        <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                                    </ion-button>
+                                    <ion-button size="small" fill="clear" color="danger" @click="deleteProduct(product)">
+                                        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                                    </ion-button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <ion-card-content class="p-4">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <!-- Items per page selector -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm" style="color: var(--ion-color-medium);">Mostrar:</span>
+                        <select x-model.number="perPage" @change="currentPage = 1; loadProducts()"
+                            class="px-2 py-1 rounded-lg" style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span class="text-sm" style="color: var(--ion-color-medium);">por página</span>
+                    </div>
+                    <!-- Page info -->
+                    <div class="text-sm" style="color: var(--ion-color-medium);">
+                        <span x-text="'Mostrando ' + ((currentPage - 1) * perPage + 1) + '-' + Math.min(currentPage * perPage, total) + ' de ' + total + ' productos'"></span>
+                    </div>
+                    <!-- Pagination buttons -->
+                    <div class="flex gap-2">
+                        <ion-button size="small" fill="outline" :disabled="currentPage === 1" @click="prevPage()">
+                            <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+                        </ion-button>
+                        <template x-for="page in totalPages" :key="page">
+                            <ion-button size="small"
+                                :fill="page === currentPage ? 'solid' : 'outline'"
+                                @click="currentPage = page; loadProducts()" x-text="page">
+                            </ion-button>
+                        </template>
+                        <ion-button size="small" fill="outline" :disabled="currentPage === totalPages" @click="nextPage()">
+                            <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+                        </ion-button>
+                    </div>
+                </div>
+            </ion-card-content>
+    </ion-card>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Plugin-specific JavaScript -->
+<script src="{% static 'products/js/avatar.js' %}"></script>
+<script src="{% static 'products/js/products.js' %}"></script>
+<script>
+// Initialize Alpine.js component using the ProductsManager class
+function productsApp() {
+    const manager = new ProductsManager();
+
+    // Set initial stats from server
+    manager.stats = {
+        total: {{ total_products }},
+        in_stock: {{ products_in_stock }},
+        low_stock: {{ products_low_stock }},
+        value: {{ total_inventory_value }}
+    };
+
+    return manager;
+}
+</script>
+{% endblock %}

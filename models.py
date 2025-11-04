@@ -1,0 +1,173 @@
+import os
+from django.db import models
+from django.core.validators import MinValueValidator
+from decimal import Decimal
+
+
+class Category(models.Model):
+    """
+    Modelo de Categoría de Productos
+    Definido primero para poder referenciar en Product
+    """
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+    slug = models.SlugField(max_length=100, unique=True, blank=True, verbose_name="Slug")
+    icon = models.CharField(
+        max_length=50,
+        default="cube-outline",
+        verbose_name="Icono Ionic",
+        help_text="Nombre del icono de Ionicons (ej: cafe-outline, pizza-outline)"
+    )
+    color = models.CharField(
+        max_length=7,
+        default="#3880ff",
+        verbose_name="Color",
+        help_text="Color en formato hexadecimal (ej: #3880ff)"
+    )
+    image = models.ImageField(
+        upload_to='categories/',
+        blank=True,
+        null=True,
+        verbose_name="Imagen",
+        help_text="Imagen de la categoría (opcional)"
+    )
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    order = models.IntegerField(
+        default=0,
+        verbose_name="Orden",
+        help_text="Orden de visualización (menor número = primero)"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Activa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+
+    class Meta:
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
+        ordering = ['order', 'name']
+        indexes = [
+            models.Index(fields=['order']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        """Auto-genera slug si no existe"""
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    @property
+    def product_count(self):
+        """Retorna el número de productos en esta categoría"""
+        return self.products.filter(is_active=True).count()
+
+    def get_image_url(self):
+        """Retorna la URL de la imagen o None"""
+        if self.image:
+            return self.image.url
+        return None
+
+    def get_initial(self):
+        """Retorna la primera letra del nombre de la categoría"""
+        if self.name:
+            # Si el nombre tiene varias palabras, retorna la primera letra de la primera palabra
+            return self.name[0].upper()
+        return '?'
+
+
+class Product(models.Model):
+    """
+    Modelo de Producto
+    """
+    name = models.CharField(max_length=255, verbose_name="Nombre")
+    sku = models.CharField(max_length=100, unique=True, verbose_name="SKU")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name="Precio"
+    )
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name="Costo"
+    )
+    stock = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name="Stock"
+    )
+    low_stock_threshold = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(0)],
+        verbose_name="Umbral de Stock Bajo"
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name="Categoría",
+        help_text="Categoría del producto. Si no se especifica, se asigna 'General'"
+    )
+    image = models.ImageField(
+        upload_to='products/images/',
+        blank=True,
+        null=True,
+        verbose_name="Imagen"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+
+    class Meta:
+        verbose_name = "Producto"
+        verbose_name_plural = "Productos"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['sku']),
+            models.Index(fields=['name']),
+            models.Index(fields=['category']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.sku})"
+
+    @property
+    def is_low_stock(self):
+        """Indica si el producto tiene stock bajo"""
+        return self.stock <= self.low_stock_threshold
+
+    @property
+    def profit_margin(self):
+        """Calcula el margen de ganancia"""
+        if self.cost > 0:
+            return ((self.price - self.cost) / self.cost) * 100
+        return 0
+
+    def get_image_path(self):
+        """Retorna la ruta relativa de la imagen"""
+        if self.image:
+            return self.image.url
+        return '/static/products/images/placeholder.png'
+
+    def get_initial(self):
+        """Retorna la primera letra del nombre del producto"""
+        if self.name:
+            # Si el nombre tiene varias palabras, retorna la primera letra de la primera palabra
+            return self.name[0].upper()
+        return '?'
+
+    def delete(self, *args, **kwargs):
+        """Elimina la imagen del filesystem al eliminar el producto"""
+        if self.image:
+            if os.path.isfile(self.image.path):
+                os.remove(self.image.path)
+        super().delete(*args, **kwargs)

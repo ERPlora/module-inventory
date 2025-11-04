@@ -1,0 +1,233 @@
+/**
+ * Products Plugin CSS
+ * Custom styles for the products plugin
+ */
+
+/* Stats Cards */
+.stat-icon-box {
+    width: 3rem;
+    height: 3rem;
+    background: rgba(var(--ion-color-primary-rgb), 0.1);
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-icon-box ion-icon {
+    font-size: 1.5rem;
+    color: var(--ion-color-primary);
+}
+
+/* Product Image */
+.product-image-preview {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 1px solid var(--ion-border-color);
+}
+
+.product-image-large {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    border: 1px solid var(--ion-border-color);
+}
+
+/* File Input */
+input[type="file"] {
+    display: none;
+}
+
+.file-upload-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--ion-color-primary);
+    color: white;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.file-upload-button:hover {
+    background: var(--ion-color-primary-shade);
+}
+
+/* Product Card Hover Effect */
+.product-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Stock Badge Colors */
+.stock-badge-high {
+    background: var(--ion-color-success);
+    color: white;
+}
+
+.stock-badge-medium {
+    background: var(--ion-color-warning);
+    color: white;
+}
+
+.stock-badge-low {
+    background: var(--ion-color-danger);
+    color: white;
+}
+
+.stock-badge-out {
+    background: var(--ion-color-medium);
+    color: white;
+}
+
+/* Search Input */
+.products-search-input {
+    width: 100%;
+    height: 2.5rem;
+    padding-left: 2.5rem;
+    padding-right: 0.75rem;
+    border: 1px solid var(--ion-border-color);
+    border-radius: 0.5rem;
+    background: var(--ion-background-color);
+    color: var(--ion-text-color);
+    font-size: 0.875rem;
+}
+
+.products-search-input:focus {
+    outline: none;
+    border-color: var(--ion-color-primary);
+}
+
+/* Table Styles */
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.products-table thead {
+    background: var(--ion-color-step-50);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.products-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--ion-color-medium);
+}
+
+.products-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--ion-border-color);
+}
+
+.products-table tbody tr:hover {
+    background: var(--ion-color-step-50);
+}
+
+/* SKU Badge */
+.sku-badge {
+    background: var(--ion-color-step-50);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-family: 'Courier New', monospace;
+}
+
+/* Pagination */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.pagination-info {
+    color: var(--ion-color-medium);
+    font-size: 0.875rem;
+}
+
+.pagination-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .product-image-preview {
+        width: 40px;
+        height: 40px;
+    }
+
+    .products-table th,
+    .products-table td {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .stat-icon-box {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .stat-icon-box ion-icon {
+        font-size: 1.25rem;
+    }
+}
+
+/* Loading Spinner */
+.products-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+/* Empty State */
+.products-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+}
+
+.products-empty ion-icon {
+    font-size: 4rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 1rem;
+}
+
+.products-empty-text {
+    color: var(--ion-color-medium);
+    font-size: 1rem;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
