@@ -6,7 +6,7 @@ from django.utils.text import slugify
 
 def generate_slugs(apps, schema_editor):
     """Generate slugs for existing categories"""
-    Category = apps.get_model('products', 'Category')
+    Category = apps.get_model('inventory', 'Category')
     for category in Category.objects.all():
         if not category.slug:
             base_slug = slugify(category.name)
@@ -22,8 +22,8 @@ def generate_slugs(apps, schema_editor):
 
 def migrate_product_categories(apps, schema_editor):
     """Convert product categories from string to ForeignKey"""
-    Product = apps.get_model('products', 'Product')
-    Category = apps.get_model('products', 'Category')
+    Product = apps.get_model('inventory', 'Product')
+    Category = apps.get_model('inventory', 'Category')
 
     # Build a map of category names to IDs
     category_map = {cat.name: cat.id for cat in Category.objects.all()}
@@ -72,7 +72,7 @@ def migrate_product_categories(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('products', '0001_initial'),
+        ('inventory', '0001_initial'),
     ]
 
     operations = [
@@ -163,7 +163,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name='products',
-                to='products.category',
+                to='inventory.category',
                 verbose_name='Categoría'
             ),
         ),

@@ -5,13 +5,15 @@ from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
+from apps.accounts.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from .models import Product, Category
 
 
+@login_required
 def index(request):
     """
     Vista principal del plugin de productos
@@ -33,9 +35,10 @@ def index(request):
         'products_low_stock': products_low_stock,
         'total_inventory_value': total_inventory_value,
     }
-    return render(request, 'products/index.html', context)
+    return render(request, 'inventory/index.html', context)
 
 
+@login_required
 def product_list_ajax(request):
     """
     Retorna la lista de productos en formato JSON para tabla dinámica
@@ -84,6 +87,7 @@ def product_list_ajax(request):
     })
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 def product_create(request):
     """
@@ -128,9 +132,10 @@ def product_create(request):
                 'message': str(e)
             }, status=400)
 
-    return render(request, 'products/create.html')
+    return render(request, 'inventory/create.html')
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 def product_edit(request, pk):
     """
@@ -179,9 +184,10 @@ def product_edit(request, pk):
             }, status=400)
 
     context = {'product': product}
-    return render(request, 'products/edit.html', context)
+    return render(request, 'inventory/edit.html', context)
 
 
+@login_required
 @require_http_methods(["POST"])
 def product_delete(request, pk):
     """
@@ -202,6 +208,7 @@ def product_delete(request, pk):
         }, status=400)
 
 
+@login_required
 def export_csv(request):
     """
     Exportar productos a CSV
@@ -229,6 +236,7 @@ def export_csv(request):
     return response
 
 
+@login_required
 @require_http_methods(["POST"])
 def import_csv(request):
     """
@@ -258,39 +266,62 @@ def import_csv(request):
         updated = 0
         errors = []
 
-        for row in reader:
-            try:
-                sku = row.get('SKU', '').strip()
-                if not sku:
-                    continue
+        with transaction.atomic():
+            for row in reader:
+                try:
+                    sku = row.get('SKU', '').strip()
+                    if not sku:
+                        continue
 
-                # Get or create category
-                category_name = row.get('Categoría', 'General').strip()
-                category, _ = Category.objects.get_or_create(
-                    name=category_name,
-                    defaults={'icon': 'cube-outline', 'is_active': True}
-                )
+                    # Validations
+                    name = row.get('Nombre', '').strip()
+                    if not name:
+                        errors.append(f"Fila {reader.line_num}: El nombre es obligatorio")
+                        continue
 
-                product, is_created = Product.objects.update_or_create(
-                    sku=sku,
-                    defaults={
-                        'name': row.get('Nombre', ''),
-                        'description': row.get('Descripción', ''),
-                        'category': category,
-                        'price': Decimal(row.get('Precio', '0')),
-                        'cost': Decimal(row.get('Costo', '0')),
-                        'stock': int(row.get('Stock', '0')),
-                        'low_stock_threshold': int(row.get('Umbral Stock Bajo', '10')),
-                    }
-                )
+                    price = Decimal(row.get('Precio', '0'))
+                    cost = Decimal(row.get('Costo', '0'))
+                    stock = int(row.get('Stock', '0'))
 
-                if is_created:
-                    created += 1
-                else:
-                    updated += 1
+                    if price < 0:
+                        errors.append(f"Fila {reader.line_num}: El precio no puede ser negativo")
+                        continue
 
-            except Exception as e:
-                errors.append(f"Error en fila {reader.line_num}: {str(e)}")
+                    if cost < 0:
+                        errors.append(f"Fila {reader.line_num}: El costo no puede ser negativo")
+                        continue
+
+                    if stock < 0:
+                        errors.append(f"Fila {reader.line_num}: El stock no puede ser negativo")
+                        continue
+
+                    # Get or create category
+                    category_name = row.get('Categoría', 'General').strip()
+                    category, _ = Category.objects.get_or_create(
+                        name=category_name,
+                        defaults={'icon': 'cube-outline', 'is_active': True}
+                    )
+
+                    product, is_created = Product.objects.update_or_create(
+                        sku=sku,
+                        defaults={
+                            'name': name,
+                            'description': row.get('Descripción', ''),
+                            'category': category,
+                            'price': price,
+                            'cost': cost,
+                            'stock': stock,
+                            'low_stock_threshold': int(row.get('Umbral Stock Bajo', '10')),
+                        }
+                    )
+
+                    if is_created:
+                        created += 1
+                    else:
+                        updated += 1
+
+                except Exception as e:
+                    errors.append(f"Error en fila {reader.line_num}: {str(e)}")
 
         return JsonResponse({
             'success': True,
@@ -307,6 +338,7 @@ def import_csv(request):
         }, status=400)
 
 
+@login_required
 @require_http_methods(["POST"])
 def import_excel(request):
     """
@@ -347,41 +379,64 @@ def import_excel(request):
         updated = 0
         errors = []
 
-        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            try:
-                row_dict = dict(zip(headers, row))
+        with transaction.atomic():
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    row_dict = dict(zip(headers, row))
 
-                sku = str(row_dict.get('SKU', '')).strip()
-                if not sku:
-                    continue
+                    sku = str(row_dict.get('SKU', '')).strip()
+                    if not sku:
+                        continue
 
-                # Get or create category
-                category_name = str(row_dict.get('Categoría', 'General')).strip()
-                category, _ = Category.objects.get_or_create(
-                    name=category_name,
-                    defaults={'icon': 'cube-outline', 'is_active': True}
-                )
+                    # Validations
+                    name = str(row_dict.get('Nombre', '')).strip()
+                    if not name:
+                        errors.append(f"Fila {row_idx}: El nombre es obligatorio")
+                        continue
 
-                product, is_created = Product.objects.update_or_create(
-                    sku=sku,
-                    defaults={
-                        'name': str(row_dict.get('Nombre', '')),
-                        'description': str(row_dict.get('Descripción', '')),
-                        'category': category,
-                        'price': Decimal(str(row_dict.get('Precio', '0'))),
-                        'cost': Decimal(str(row_dict.get('Costo', '0'))),
-                        'stock': int(row_dict.get('Stock', 0)),
-                        'low_stock_threshold': int(row_dict.get('Umbral Stock Bajo', 10)),
-                    }
-                )
+                    price = Decimal(str(row_dict.get('Precio', '0')))
+                    cost = Decimal(str(row_dict.get('Costo', '0')))
+                    stock = int(row_dict.get('Stock', 0))
 
-                if is_created:
-                    created += 1
-                else:
-                    updated += 1
+                    if price < 0:
+                        errors.append(f"Fila {row_idx}: El precio no puede ser negativo")
+                        continue
 
-            except Exception as e:
-                errors.append(f"Error en fila {row_idx}: {str(e)}")
+                    if cost < 0:
+                        errors.append(f"Fila {row_idx}: El costo no puede ser negativo")
+                        continue
+
+                    if stock < 0:
+                        errors.append(f"Fila {row_idx}: El stock no puede ser negativo")
+                        continue
+
+                    # Get or create category
+                    category_name = str(row_dict.get('Categoría', 'General')).strip()
+                    category, _ = Category.objects.get_or_create(
+                        name=category_name,
+                        defaults={'icon': 'cube-outline', 'is_active': True}
+                    )
+
+                    product, is_created = Product.objects.update_or_create(
+                        sku=sku,
+                        defaults={
+                            'name': name,
+                            'description': str(row_dict.get('Descripción', '')),
+                            'category': category,
+                            'price': price,
+                            'cost': cost,
+                            'stock': stock,
+                            'low_stock_threshold': int(row_dict.get('Umbral Stock Bajo', 10)),
+                        }
+                    )
+
+                    if is_created:
+                        created += 1
+                    else:
+                        updated += 1
+
+                except Exception as e:
+                    errors.append(f"Error en fila {row_idx}: {str(e)}")
 
         return JsonResponse({
             'success': True,
@@ -398,6 +453,7 @@ def import_excel(request):
         }, status=400)
 
 
+@login_required
 def categories_list(request):
     """
     Retorna la lista de categorías para dropdowns
@@ -411,6 +467,7 @@ def categories_list(request):
             'color': category.color,
             'image': category.get_image_url(),
             'initial': category.get_initial(),
+            'product_count': category.product_count,
         }
         for category in categories
     ]
@@ -418,3 +475,140 @@ def categories_list(request):
     return JsonResponse({
         'categories': categories_data
     })
+
+
+@login_required
+def categories_index(request):
+    """Vista principal de gestión de categorías."""
+    categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+
+    context = {
+        'categories': categories,
+        'total_categories': categories.count()
+    }
+    return render(request, 'inventory/categories.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def category_create(request):
+    """Crear una nueva categoría."""
+    if request.method == 'POST':
+        try:
+            image = request.FILES.get('image')
+
+            category = Category.objects.create(
+                name=request.POST['name'],
+                description=request.POST.get('description', ''),
+                icon=request.POST.get('icon', 'cube-outline'),
+                color=request.POST.get('color', '#3880ff'),
+                order=int(request.POST.get('order', 0)),
+                image=image
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Categoría creada exitosamente',
+                'category_id': category.id
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
+
+    return render(request, 'inventory/category_create.html')
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def category_edit(request, pk):
+    """Editar una categoría existente."""
+    category = get_object_or_404(Category, pk=pk)
+
+    if request.method == 'POST':
+        try:
+            category.name = request.POST['name']
+            category.description = request.POST.get('description', '')
+            category.icon = request.POST.get('icon', 'cube-outline')
+            category.color = request.POST.get('color', '#3880ff')
+            category.order = int(request.POST.get('order', 0))
+
+            # Actualizar imagen si se proporciona
+            if 'image' in request.FILES:
+                if category.image:
+                    if os.path.isfile(category.image.path):
+                        os.remove(category.image.path)
+                category.image = request.FILES['image']
+
+            category.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Categoría actualizada exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
+
+    context = {'category': category}
+    return render(request, 'inventory/category_edit.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def category_delete(request, pk):
+    """Eliminar una categoría."""
+    try:
+        category = get_object_or_404(Category, pk=pk)
+
+        # Check if category has products
+        product_count = category.products.filter(is_active=True).count()
+        if product_count > 0:
+            return JsonResponse({
+                'success': False,
+                'message': f'No se puede eliminar la categoría porque tiene {product_count} productos asociados'
+            }, status=400)
+
+        category.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Categoría eliminada exitosamente'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+def settings_view(request):
+    """Vista de configuración del plugin de productos"""
+    import json
+    from .models import ProductsConfig
+
+    config = ProductsConfig.get_config()
+
+    if request.method == "POST":
+        try:
+            # Parse JSON body
+            data = json.loads(request.body)
+
+            # Update config
+            config.allow_negative_stock = data.get('allow_negative_stock', False)
+            config.low_stock_alert_enabled = data.get('low_stock_alert_enabled', True)
+            config.save()
+
+            return JsonResponse({"success": True, "message": "Configuración guardada correctamente"})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+    context = {
+        "config": config,
+    }
+    return render(request, "inventory/settings.html", context)
+

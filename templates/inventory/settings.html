@@ -1,0 +1,153 @@
+{% extends "core/app_base.html" %}
+{% load static %}
+
+{% block title %}Configuración - Productos - CPOS Hub{% endblock %}
+
+{% block page_title %}Configuración de Productos{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div x-data="settingsApp()" x-init="init()" class="p-4">
+    <!-- Header -->
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold mb-2" style="color: var(--ion-text-color);">
+            Configuración de Productos
+        </h2>
+        <p style="color: var(--ion-color-medium);">
+            Configura el comportamiento del plugin de productos e inventario
+        </p>
+    </div>
+
+    <!-- Settings Form -->
+    <ion-card>
+        <ion-card-content>
+            <form @submit.prevent="saveSettings()">
+                <!-- Allow Negative Stock -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-semibold mb-1" style="color: var(--ion-text-color);">
+                                Permitir Stock Negativo
+                            </h3>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">
+                                Permite que los productos tengan valores de stock negativos
+                            </p>
+                        </div>
+                        <ion-toggle
+                            x-model="settings.allow_negative_stock"
+                            color="primary">
+                        </ion-toggle>
+                    </div>
+                </div>
+
+                <div style="height: 1px; background: var(--ion-border-color); margin: 1.5rem 0;"></div>
+
+                <!-- Low Stock Alerts -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-semibold mb-1" style="color: var(--ion-text-color);">
+                                Alertas de Stock Bajo
+                            </h3>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">
+                                Enviar alertas cuando los productos alcancen el umbral de stock bajo
+                            </p>
+                        </div>
+                        <ion-toggle
+                            x-model="settings.low_stock_alert_enabled"
+                            color="primary">
+                        </ion-toggle>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 mt-6">
+                    <ion-button type="submit" expand="block" class="flex-1">
+                        <ion-icon slot="start" name="save-outline"></ion-icon>
+                        Guardar Cambios
+                    </ion-button>
+                    <ion-button
+                        type="button"
+                        color="medium"
+                        fill="outline"
+                        @click="resetToDefaults()">
+                        <ion-icon slot="start" name="refresh-outline"></ion-icon>
+                        Restablecer
+                    </ion-button>
+                </div>
+            </form>
+        </ion-card-content>
+    </ion-card>
+
+    <!-- Info Card -->
+    <ion-card class="mt-4">
+        <ion-card-header>
+            <ion-card-title>
+                <ion-icon name="information-circle-outline" class="align-middle mr-2"></ion-icon>
+                Información
+            </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+            <p class="text-sm" style="color: var(--ion-color-medium);">
+                Esta configuración se guarda localmente en el Hub y afecta al comportamiento
+                del plugin de productos. Los cambios se aplican inmediatamente.
+            </p>
+        </ion-card-content>
+    </ion-card>
+</div>
+
+<script>
+function settingsApp() {
+    return {
+        settings: {
+            allow_negative_stock: {{ config.allow_negative_stock|lower }},
+            low_stock_alert_enabled: {{ config.low_stock_alert_enabled|lower }}
+        },
+
+        init() {
+            console.log('[Products Settings] Initialized', this.settings);
+        },
+
+        async saveSettings() {
+            try {
+                const response = await fetch('{% url "inventory:settings" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(this.settings)
+                });
+
+                if (response.ok) {
+                    this.showToast('Configuración guardada correctamente', 'success');
+                } else {
+                    throw new Error('Error al guardar la configuración');
+                }
+            } catch (error) {
+                console.error('[Products Settings] Error:', error);
+                this.showToast('Error al guardar la configuración', 'danger');
+            }
+        },
+
+        resetToDefaults() {
+            this.settings = {
+                allow_negative_stock: false,
+                low_stock_alert_enabled: true
+            };
+            this.showToast('Configuración restablecida a valores predeterminados', 'warning');
+        },
+
+        async showToast(message, color = 'primary') {
+            const toast = document.createElement('ion-toast');
+            toast.message = message;
+            toast.duration = 2000;
+            toast.color = color;
+            toast.position = 'top';
+            document.body.appendChild(toast);
+            await toast.present();
+        }
+    }
+}
+</script>
+{% endblock %}

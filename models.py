@@ -4,6 +4,47 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 
+class ProductsConfig(models.Model):
+    """
+    Configuration for Products Plugin.
+    Singleton model (only one instance with id=1).
+    """
+    # Inventory Settings
+    allow_negative_stock = models.BooleanField(
+        default=False,
+        help_text='Allow products to have negative stock values (sell even when out of stock)'
+    )
+
+    low_stock_alert_enabled = models.BooleanField(
+        default=True,
+        help_text='Show alerts when products are low in stock'
+    )
+
+    auto_generate_sku = models.BooleanField(
+        default=True,
+        help_text='Automatically generate SKU for new products'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'inventory'
+        db_table = 'inventory_config'
+        verbose_name = 'Inventory Configuration'
+        verbose_name_plural = 'Inventory Configuration'
+
+    def __str__(self):
+        return "Products Configuration"
+
+    @classmethod
+    def get_config(cls):
+        """Get or create products configuration (singleton pattern)"""
+        config, _ = cls.objects.get_or_create(id=1)
+        return config
+
+
 class Category(models.Model):
     """
     Modelo de Categoría de Productos
@@ -41,6 +82,8 @@ class Category(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
 
     class Meta:
+        app_label = 'inventory'
+        db_table = 'inventory_category'
         verbose_name = "Categoría"
         verbose_name_plural = "Categorías"
         ordering = ['order', 'name']
@@ -128,6 +171,8 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
 
     class Meta:
+        app_label = 'inventory'
+        db_table = 'inventory_product'
         verbose_name = "Producto"
         verbose_name_plural = "Productos"
         ordering = ['-created_at']

@@ -1,0 +1,234 @@
+[
+  {
+    "model": "products.category",
+    "pk": 1,
+    "fields": {
+      "name": "Bebidas",
+      "slug": "bebidas",
+      "icon": "cafe-outline",
+      "color": "#FF5722",
+      "description": "Bebidas frías y calientes",
+      "order": 1,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.category",
+    "pk": 2,
+    "fields": {
+      "name": "Comida Rápida",
+      "slug": "comida-rapida",
+      "icon": "fast-food-outline",
+      "color": "#FFC107",
+      "description": "Hamburguesas, pizzas y más",
+      "order": 2,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.category",
+    "pk": 3,
+    "fields": {
+      "name": "Postres",
+      "slug": "postres",
+      "icon": "ice-cream-outline",
+      "color": "#E91E63",
+      "description": "Dulces y postres",
+      "order": 3,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.category",
+    "pk": 4,
+    "fields": {
+      "name": "Snacks",
+      "slug": "snacks",
+      "icon": "nutrition-outline",
+      "color": "#9C27B0",
+      "description": "Botanas y aperitivos",
+      "order": 4,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 1,
+    "fields": {
+      "name": "Coca Cola 355ml",
+      "sku": "BEB-CC-355",
+      "description": "Refresco de cola en lata",
+      "price": "15.00",
+      "cost": "8.50",
+      "stock": 150,
+      "low_stock_threshold": 20,
+      "category": 1,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 2,
+    "fields": {
+      "name": "Pepsi 355ml",
+      "sku": "BEB-PP-355",
+      "description": "Refresco de cola en lata",
+      "price": "14.00",
+      "cost": "8.00",
+      "stock": 120,
+      "low_stock_threshold": 20,
+      "category": 1,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 3,
+    "fields": {
+      "name": "Agua Natural 600ml",
+      "sku": "BEB-AG-600",
+      "description": "Agua purificada embotellada",
+      "price": "10.00",
+      "cost": "5.00",
+      "stock": 200,
+      "low_stock_threshold": 30,
+      "category": 1,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 4,
+    "fields": {
+      "name": "Hamburguesa Clásica",
+      "sku": "COM-HB-CL",
+      "description": "Hamburguesa con queso, lechuga y tomate",
+      "price": "65.00",
+      "cost": "35.00",
+      "stock": 50,
+      "low_stock_threshold": 10,
+      "category": 2,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 5,
+    "fields": {
+      "name": "Pizza Margarita Personal",
+      "sku": "COM-PZ-MG",
+      "description": "Pizza individual con queso y albahaca",
+      "price": "85.00",
+      "cost": "40.00",
+      "stock": 30,
+      "low_stock_threshold": 5,
+      "category": 2,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 6,
+    "fields": {
+      "name": "Papas Fritas Medianas",
+      "sku": "COM-PF-MD",
+      "description": "Papas a la francesa porción mediana",
+      "price": "35.00",
+      "cost": "15.00",
+      "stock": 80,
+      "low_stock_threshold": 15,
+      "category": 2,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 7,
+    "fields": {
+      "name": "Brownie de Chocolate",
+      "sku": "POS-BR-CH",
+      "description": "Brownie casero con nuez",
+      "price": "45.00",
+      "cost": "20.00",
+      "stock": 25,
+      "low_stock_threshold": 5,
+      "category": 3,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 8,
+    "fields": {
+      "name": "Helado de Vainilla",
+      "sku": "POS-HE-VN",
+      "description": "Copa de helado de vainilla",
+      "price": "38.00",
+      "cost": "18.00",
+      "stock": 40,
+      "low_stock_threshold": 10,
+      "category": 3,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 9,
+    "fields": {
+      "name": "Papas Sabritas Original",
+      "sku": "SNK-PS-OR",
+      "description": "Bolsa de papas fritas 45g",
+      "price": "18.00",
+      "cost": "10.00",
+      "stock": 100,
+      "low_stock_threshold": 20,
+      "category": 4,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 10,
+    "fields": {
+      "name": "Cheetos Flaming Hot",
+      "sku": "SNK-CH-FH",
+      "description": "Cheetos picantes 35g",
+      "price": "16.00",
+      "cost": "9.00",
+      "stock": 85,
+      "low_stock_threshold": 20,
+      "category": 4,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 11,
+    "fields": {
+      "name": "Doritos Nacho",
+      "sku": "SNK-DR-NC",
+      "description": "Doritos sabor nacho 45g",
+      "price": "18.00",
+      "cost": "10.00",
+      "stock": 90,
+      "low_stock_threshold": 20,
+      "category": 4,
+      "is_active": true
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 12,
+    "fields": {
+      "name": "Café Americano",
+      "sku": "BEB-CF-AM",
+      "description": "Café americano grande",
+      "price": "30.00",
+      "cost": "12.00",
+      "stock": 5,
+      "low_stock_threshold": 10,
+      "category": 1,
+      "is_active": true
+    }
+  }
+]

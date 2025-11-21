@@ -1,16 +1,17 @@
 {
-  "plugin_id": "products",
-  "name": "Products Manager",
-  "name_es": "Gestión de Productos",
+  "plugin_id": "inventory",
+  "name": "Inventory Manager",
+  "name_es": "Gestión de Inventario",
   "version": "1.0.0",
-  "description": "Comprehensive product and inventory management plugin with multi-language support, category management, and CSV/Excel import/export",
-  "description_es": "Plugin completo para gestión de productos e inventario con soporte multiidioma, gestión de categorías, e importación/exportación de CSV y Excel",
-  "author": "CPOS Team",
-  "author_email": "plugins@cpos.app",
+  "category": "inventory",
+  "description": "Comprehensive inventory management plugin with products, categories, stock control, and CSV/Excel import/export",
+  "description_es": "Plugin completo para gestión de inventario con productos, categorías, control de stock, e importación/exportación de CSV y Excel",
+  "author": "ERPlora Team",
+  "author_email": "plugins@erplora.com",
   "license": "MIT",
-  "homepage": "https://github.com/cpos-plugins/cpos-plugin-products",
-  "repository": "https://github.com/cpos-plugins/cpos-plugin-products.git",
-  "documentation": "https://docs.cpos.app/plugins/products",
+  "homepage": "https://github.com/erplora-plugins/erplora-plugin-inventory",
+  "repository": "https://github.com/erplora-plugins/erplora-plugin-inventory.git",
+  "documentation": "https://docs.erplora.com/plugins/inventory",
 
   "compatibility": {
     "min_cpos_version": "1.0.0",
@@ -38,22 +39,41 @@
   },
 
   "permissions": [
-    "products.view_product",
-    "products.add_product",
-    "products.change_product",
-    "products.delete_product",
-    "products.view_category",
-    "products.add_category",
-    "products.change_category",
-    "products.delete_category"
+    "inventory.view_product",
+    "inventory.add_product",
+    "inventory.change_product",
+    "inventory.delete_product",
+    "inventory.view_category",
+    "inventory.add_category",
+    "inventory.change_category",
+    "inventory.delete_category"
   ],
 
   "menu": {
-    "label": "Products",
-    "label_es": "Productos",
+    "label": "Inventory",
+    "label_es": "Inventario",
     "icon": "cube-outline",
-    "url": "/products/",
-    "order": 10
+    "order": 10,
+    "items": [
+      {
+        "label": "Products",
+        "label_es": "Productos",
+        "url": "/plugins/inventory/products/",
+        "icon": "cube-outline"
+      },
+      {
+        "label": "Categories",
+        "label_es": "Categorías",
+        "url": "/plugins/inventory/categories/",
+        "icon": "albums-outline"
+      },
+      {
+        "label": "Settings",
+        "label_es": "Configuración",
+        "url": "/plugins/inventory/settings/",
+        "icon": "settings-outline"
+      }
+    ]
   },
 
   "settings": {
@@ -133,16 +153,16 @@
   },
 
   "static_files": {
-    "css": ["products/css/products.css"],
+    "css": ["inventory/css/inventory.css"],
     "js": [
-      "products/js/avatar.js",
-      "products/js/products.js"
+      "inventory/js/avatar.js",
+      "inventory/js/inventory.js"
     ]
   },
 
   "media_uploads": {
-    "products": "products/images/",
-    "categories": "categories/"
+    "products": "inventory/products/images/",
+    "categories": "inventory/categories/"
   },
 
   "changelog": {

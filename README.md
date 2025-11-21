@@ -44,4 +44,4 @@ python ../../manage.py compilemessages
 
 - **Repository Structure**: Each plugin should have its own GitHub repository
 - **Plugin Registry**: https://github.com/cpos-plugins (organization)
-- **Documentation**: https://docs.cpos.app/plugins/
+- **Documentation**: https://docs.erplora.com/plugins/
