@@ -2,344 +2,121 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans "Categories" %} - Inventory{% endblock %}
-{% block page_title %}{% trans "Categories" %}{% endblock %}
+{% block title %}{% trans "Categorías" %} - Inventory{% endblock %}
 
 {% block content %}
-<div style="padding: 24px;" x-data="categoriesApp()">
-    <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <div>
-            <h2 style="margin: 0;">{% trans "Product Categories" %}</h2>
-            <p style="color: var(--ion-color-medium); margin-top: 4px;">
-                {{ total_categories }} {% trans "categories" %}
-            </p>
+<div class="p-4">
+    <!-- Categories Table -->
+    <ion-card class="my-4">
+        <ion-card-header>
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <ion-card-title>{% trans "Categorías" %}</ion-card-title>
+                <div class="flex gap-2 flex-wrap">
+                    <ion-button size="large" href="/plugins/inventory/categories/create/">
+                        <ion-icon slot="start" name="add-outline"></ion-icon>
+                        {% trans "Nueva Categoría" %}
+                    </ion-button>
+                </div>
+            </div>
+        </ion-card-header>
+
+        <!-- Search Bar -->
+        <div class="px-4 pb-4">
+            <div class="relative flex-1">
+                <ion-icon
+                    name="search-outline"
+                    class="absolute left-3 top-1/2 -translate-y-1/2"
+                    style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
+                </ion-icon>
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ request.GET.search|default:'' }}"
+                    placeholder="{% trans 'Buscar categorías...' %}"
+                    class="w-full h-10 pl-10 pr-3 rounded-lg"
+                    style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
+                    hx-get="{{ request.path }}"
+                    hx-trigger="keyup changed delay:400ms"
+                    hx-target="#categories-table-container"
+                    hx-include="[name='page'],[name='order_by'],[name='per_page']"
+                    hx-push-url="true">
+            </div>
         </div>
-        <ion-button @click="showCreateModal = true">
-            <ion-icon slot="start" name="add-outline"></ion-icon>
-            {% trans "New Category" %}
-        </ion-button>
-    </div>
 
-    <!-- Categories Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
-        {% for category in categories %}
-        <ion-card style="margin: 0;">
+        <!-- Table Container (HTMX updates this) -->
+        <div id="categories-table-container">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead style="background: var(--ion-color-step-50);">
+                        <tr>
+                            <!-- ID -->
+                            <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium); width: 80px;">
+                                ID
+                            </th>
+
+                            <!-- Icon/Image -->
+                            <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium); width: 80px;">
+                                {% trans "Icono" %}
+                            </th>
+
+                            <!-- Name (sortable) -->
+                            <th
+                                class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80 select-none"
+                                style="color: var(--ion-color-medium);"
+                                hx-get="{{ request.path }}"
+                                hx-target="#categories-table-container"
+                                hx-include="[name='search'],[name='page'],[name='per_page']"
+                                hx-vals='{"order_by": "{% if request.GET.order_by == "name" %}-name{% elif request.GET.order_by == "-name" %}name{% else %}-name{% endif %}"}'
+                                hx-push-url="true">
+                                {% trans "Nombre" %}
+                                {% if request.GET.order_by == "name" %}
+                                <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                                {% elif request.GET.order_by == "-name" %}
+                                <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                                {% endif %}
+                            </th>
+
+                            <!-- Description -->
+                            <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium);">
+                                {% trans "Descripción" %}
+                            </th>
+
+                            <!-- Product Count -->
+                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium); width: 120px;">
+                                {% trans "Productos" %}
+                            </th>
+
+                            <!-- Order (sortable) -->
+                            <th
+                                class="px-4 py-3 text-center text-sm font-medium cursor-pointer hover:bg-opacity-80 select-none"
+                                style="color: var(--ion-color-medium); width: 100px;"
+                                hx-get="{{ request.path }}"
+                                hx-target="#categories-table-container"
+                                hx-include="[name='search'],[name='page'],[name='per_page']"
+                                hx-vals='{"order_by": "{% if request.GET.order_by == "order" %}-order{% elif request.GET.order_by == "-order" %}order{% else %}order{% endif %}"}'
+                                hx-push-url="true">
+                                {% trans "Orden" %}
+                                {% if request.GET.order_by == "order" %}
+                                <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                                {% elif request.GET.order_by == "-order" %}
+                                <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                                {% endif %}
+                            </th>
+
+                            <!-- Actions -->
+                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium); width: 120px;">
+                                {% trans "Acciones" %}
+                            </th>
+                        </tr>
+                    </thead>
+                    {% include "inventory/partials/categories_table_rows.html" %}
+                </table>
+            </div>
+
             <ion-card-content>
-                <div style="display: flex; align-items: start; gap: 16px;">
-                    <!-- Icon/Image -->
-                    <div style="width: 56px; height: 56px; border-radius: 12px; background: {{ category.color }}15; color: {{ category.color }}; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">
-                        {% if category.image %}
-                            <img src="{{ category.image.url }}" alt="{{ category.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
-                        {% else %}
-                            <ion-icon name="{{ category.icon }}"></ion-icon>
-                        {% endif %}
-                    </div>
-
-                    <!-- Info -->
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 1.125rem; font-weight: 600; margin-bottom: 4px;">
-                            {{ category.name }}
-                        </div>
-                        {% if category.description %}
-                        <div style="color: var(--ion-color-medium); font-size: 0.875rem; margin-bottom: 8px;">
-                            {{ category.description|truncatewords:10 }}
-                        </div>
-                        {% endif %}
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <ion-badge color="primary">
-                                {{ category.product_set.count }} {% trans "products" %}
-                            </ion-badge>
-                            <span style="color: var(--ion-color-medium); font-size: 0.75rem;">
-                                {% trans "Order" %}: {{ category.order }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div style="display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ion-color-light-shade);">
-                    <ion-button size="small" fill="outline" @click="editCategory({{ category.id }})">
-                        <ion-icon slot="start" name="create-outline"></ion-icon>
-                        {% trans "Edit" %}
-                    </ion-button>
-                    <ion-button size="small" fill="outline" color="danger" @click="deleteCategory({{ category.id }}, '{{ category.name }}')">
-                        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-                    </ion-button>
-                </div>
+                {% include "inventory/partials/categories_pagination.html" %}
             </ion-card-content>
-        </ion-card>
-        {% empty %}
-        <ion-card>
-            <ion-card-content style="text-align: center; padding: 40px;">
-                <ion-icon name="albums-outline" style="font-size: 64px; color: var(--ion-color-medium);"></ion-icon>
-                <p style="color: var(--ion-color-medium); margin-top: 16px;">
-                    {% trans "No categories yet" %}
-                </p>
-                <ion-button @click="showCreateModal = true" style="margin-top: 16px;">
-                    {% trans "Create Your First Category" %}
-                </ion-button>
-            </ion-card-content>
-        </ion-card>
-        {% endfor %}
-    </div>
-
-    <!-- Create/Edit Modal -->
-    <ion-modal :is-open="showCreateModal || showEditModal" @didDismiss="closeModal()">
-        <ion-header>
-            <ion-toolbar>
-                <ion-title x-text="showEditModal ? '{% trans "Edit Category" %}' : '{% trans "New Category" %}'"></ion-title>
-                <ion-buttons slot="end">
-                    <ion-button @click="closeModal()">
-                        <ion-icon name="close"></ion-icon>
-                    </ion-button>
-                </ion-buttons>
-            </ion-toolbar>
-        </ion-header>
-        <ion-content class="ion-padding">
-            <form @submit.prevent="saveCategory()">
-                <div style="display: grid; gap: 16px;">
-                    <!-- Name -->
-                    <div>
-                        <ion-label position="stacked">{% trans "Name" %} *</ion-label>
-                        <ion-input
-                            x-model="form.name"
-                            placeholder="{% trans "Category name" %}"
-                            required>
-                        </ion-input>
-                    </div>
-
-                    <!-- Icon -->
-                    <div>
-                        <ion-label position="stacked">{% trans "Icon" %}</ion-label>
-                        <ion-input
-                            x-model="form.icon"
-                            placeholder="cube-outline"
-                            helper-text="Ionicons name (ej: cafe-outline, pizza-outline)">
-                        </ion-input>
-                    </div>
-
-                    <!-- Color -->
-                    <div>
-                        <ion-label position="stacked">{% trans "Color" %}</ion-label>
-                        <input
-                            type="color"
-                            x-model="form.color"
-                            style="width: 100%; height: 48px; border: 1px solid var(--ion-color-medium); border-radius: 8px; cursor: pointer;">
-                    </div>
-
-                    <!-- Description -->
-                    <div>
-                        <ion-label position="stacked">{% trans "Description" %}</ion-label>
-                        <ion-textarea
-                            x-model="form.description"
-                            rows="4"
-                            placeholder="{% trans "Category description" %}">
-                        </ion-textarea>
-                    </div>
-
-                    <!-- Order -->
-                    <div>
-                        <ion-label position="stacked">{% trans "Order" %}</ion-label>
-                        <ion-input
-                            type="number"
-                            x-model="form.order"
-                            placeholder="0">
-                        </ion-input>
-                    </div>
-
-                    <!-- Image Upload -->
-                    <div>
-                        <ion-label position="stacked">{% trans "Image" %} ({% trans "optional" %})</ion-label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            @change="handleImageSelect($event)"
-                            style="margin-top: 8px; width: 100%; padding: 12px; border: 2px dashed var(--ion-color-medium); border-radius: 8px; cursor: pointer;">
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
-                    <ion-button color="medium" @click="closeModal()" type="button">
-                        {% trans "Cancel" %}
-                    </ion-button>
-                    <ion-button type="submit" :disabled="saving">
-                        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
-                        <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save" %}'"></span>
-                    </ion-button>
-                </div>
-            </form>
-        </ion-content>
-    </ion-modal>
+        </div>
+    </ion-card>
 </div>
-
-<script>
-function categoriesApp() {
-    return {
-        showCreateModal: false,
-        showEditModal: false,
-        saving: false,
-        editingId: null,
-        form: {
-            name: '',
-            icon: 'cube-outline',
-            color: '#3880ff',
-            description: '',
-            order: 0,
-            image: null
-        },
-
-        closeModal() {
-            this.showCreateModal = false;
-            this.showEditModal = false;
-            this.resetForm();
-        },
-
-        resetForm() {
-            this.form = {
-                name: '',
-                icon: 'cube-outline',
-                color: '#3880ff',
-                description: '',
-                order: 0,
-                image: null
-            };
-            this.editingId = null;
-        },
-
-        handleImageSelect(event) {
-            this.form.image = event.target.files[0];
-        },
-
-        async saveCategory() {
-            this.saving = true;
-
-            const formData = new FormData();
-            formData.append('name', this.form.name);
-            formData.append('icon', this.form.icon);
-            formData.append('color', this.form.color);
-            formData.append('description', this.form.description);
-            formData.append('order', this.form.order);
-            if (this.form.image) {
-                formData.append('image', this.form.image);
-            }
-
-            try {
-                const url = this.showEditModal
-                    ? `/plugins/inventory/categories/edit/${this.editingId}/`
-                    : '/plugins/inventory/categories/create/';
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': this.getCookie('csrftoken')
-                    }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    window.location.reload();
-                } else {
-                    await this.showErrorAlert(result.error || '{% trans "Error saving category" %}');
-                }
-            } catch (error) {
-                await this.showErrorAlert('{% trans "Network error: " %}' + error.message);
-            } finally {
-                this.saving = false;
-            }
-        },
-
-        async editCategory(categoryId) {
-            try {
-                const response = await fetch(`/plugins/inventory/categories/api/?id=${categoryId}`);
-                const result = await response.json();
-
-                if (result.success && result.categories.length > 0) {
-                    const category = result.categories[0];
-                    this.form.name = category.name;
-                    this.form.icon = category.icon;
-                    this.form.color = category.color;
-                    this.form.description = category.description;
-                    this.form.order = category.order;
-                    this.editingId = categoryId;
-                    this.showEditModal = true;
-                }
-            } catch (error) {
-                await this.showErrorAlert('{% trans "Error loading category" %}');
-            }
-        },
-
-        async deleteCategory(categoryId, categoryName) {
-            const alert = document.createElement('ion-alert');
-            alert.header = '{% trans "Delete Category" %}';
-            alert.message = `{% trans "Do you want to delete" %} ${categoryName}?`;
-            alert.buttons = [
-                {
-                    text: '{% trans "Cancel" %}',
-                    role: 'cancel'
-                },
-                {
-                    text: '{% trans "Delete" %}',
-                    role: 'confirm',
-                    cssClass: 'alert-button-danger',
-                    handler: async () => {
-                        try {
-                            const response = await fetch(`/plugins/inventory/categories/delete/${categoryId}/`, {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': this.getCookie('csrftoken')
-                                }
-                            });
-
-                            const result = await response.json();
-
-                            if (result.success) {
-                                window.location.reload();
-                            } else {
-                                await this.showErrorAlert(result.error || '{% trans "Error deleting category" %}');
-                            }
-                        } catch (error) {
-                            await this.showErrorAlert('{% trans "Network error: " %}' + error.message);
-                        }
-                    }
-                }
-            ];
-            document.body.appendChild(alert);
-            await alert.present();
-        },
-
-        async showErrorAlert(message) {
-            const alert = document.createElement('ion-alert');
-            alert.header = '{% trans "Error" %}';
-            alert.message = message;
-            alert.buttons = ['OK'];
-            document.body.appendChild(alert);
-            await alert.present();
-        },
-
-        getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    }
-}
-</script>
-
-<style>
-.alert-button-danger {
-    color: var(--ion-color-danger) !important;
-}
-</style>
 {% endblock %}

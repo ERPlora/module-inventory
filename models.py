@@ -25,6 +25,11 @@ class ProductsConfig(models.Model):
         help_text='Automatically generate SKU for new products'
     )
 
+    barcode_enabled = models.BooleanField(
+        default=True,
+        help_text='Enable barcode generation and printing for products'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -96,7 +101,12 @@ class Category(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        """Auto-genera slug si no existe"""
+        """Auto-capitaliza el nombre y genera slug si no existe"""
+        # Capitalize el nombre automáticamente
+        if self.name:
+            self.name = self.name.strip().capitalize()
+
+        # Auto-genera slug si no existe
         if not self.slug:
             from django.utils.text import slugify
             self.slug = slugify(self.name)
@@ -151,14 +161,12 @@ class Product(models.Model):
         validators=[MinValueValidator(0)],
         verbose_name="Umbral de Stock Bajo"
     )
-    category = models.ForeignKey(
+    categories = models.ManyToManyField(
         Category,
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
         related_name='products',
-        verbose_name="Categoría",
-        help_text="Categoría del producto. Si no se especifica, se asigna 'General'"
+        verbose_name="Categorías",
+        help_text="Categorías del producto (puede pertenecer a múltiples)"
     )
     image = models.ImageField(
         upload_to='products/images/',
@@ -179,7 +187,6 @@ class Product(models.Model):
         indexes = [
             models.Index(fields=['sku']),
             models.Index(fields=['name']),
-            models.Index(fields=['category']),
         ]
 
     def __str__(self):
@@ -210,8 +217,107 @@ class Product(models.Model):
             return self.name[0].upper()
         return '?'
 
+    def save(self, *args, **kwargs):
+        """Auto-capitaliza el nombre"""
+        if self.name:
+            self.name = self.name.strip().capitalize()
+        super().save(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         """Elimina la imagen del filesystem al eliminar el producto"""
+        if self.image:
+            if os.path.isfile(self.image.path):
+                os.remove(self.image.path)
+        super().delete(*args, **kwargs)
+
+
+class ProductVariant(models.Model):
+    """
+    Modelo de Variante de Producto
+    Permite que un producto tenga múltiples variantes (color, peso, talla, etc.)
+    """
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name="Producto"
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name="Nombre de Variante",
+        help_text="Ej: 'Rojo XL', 'Azul M', '1kg', '500ml'"
+    )
+    sku = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="SKU de Variante",
+        help_text="SKU único para esta variante"
+    )
+
+    # Atributos de variante (JSON flexible)
+    attributes = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Atributos",
+        help_text="Atributos como {'color': 'rojo', 'talla': 'XL', 'peso': '1kg'}"
+    )
+
+    # Precio puede ser diferente para cada variante
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name="Precio",
+        help_text="Precio específico para esta variante (puede ser diferente al producto base)"
+    )
+
+    # Stock independiente por variante
+    stock = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name="Stock"
+    )
+
+    # Imagen específica para la variante (opcional)
+    image = models.ImageField(
+        upload_to='products/variants/',
+        blank=True,
+        null=True,
+        verbose_name="Imagen de Variante"
+    )
+
+    is_active = models.BooleanField(default=True, verbose_name="Activa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+
+    class Meta:
+        app_label = 'inventory'
+        db_table = 'inventory_product_variant'
+        verbose_name = "Variante de Producto"
+        verbose_name_plural = "Variantes de Producto"
+        ordering = ['product', 'name']
+        unique_together = [['product', 'name']]  # Un producto no puede tener dos variantes con el mismo nombre
+        indexes = [
+            models.Index(fields=['sku']),
+            models.Index(fields=['product', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.product.name} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        """Auto-capitaliza el nombre"""
+        if self.name:
+            self.name = self.name.strip().capitalize()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_low_stock(self):
+        """Indica si la variante tiene stock bajo (usa el umbral del producto padre)"""
+        return self.stock <= self.product.low_stock_threshold
+
+    def delete(self, *args, **kwargs):
+        """Elimina la imagen del filesystem al eliminar la variante"""
         if self.image:
             if os.path.isfile(self.image.path):
                 os.remove(self.image.path)

@@ -12,13 +12,11 @@
   "homepage": "https://github.com/erplora-plugins/erplora-plugin-inventory",
   "repository": "https://github.com/erplora-plugins/erplora-plugin-inventory.git",
   "documentation": "https://docs.erplora.com/plugins/inventory",
-
   "compatibility": {
     "min_cpos_version": "1.0.0",
     "max_cpos_version": "2.0.0",
     "django_version": "5.1.x"
   },
-
   "dependencies": {
     "python": [
       "Pillow>=10.0.0",
@@ -26,10 +24,12 @@
     ],
     "plugins": []
   },
-
   "features": {
     "i18n": true,
-    "languages": ["en", "es"],
+    "languages": [
+      "en",
+      "es"
+    ],
     "api": true,
     "webhooks": false,
     "background_tasks": false,
@@ -37,7 +37,6 @@
     "supports_export": true,
     "supports_import": true
   },
-
   "permissions": [
     "inventory.view_product",
     "inventory.add_product",
@@ -48,13 +47,18 @@
     "inventory.change_category",
     "inventory.delete_category"
   ],
-
   "menu": {
     "label": "Inventory",
     "label_es": "Inventario",
     "icon": "cube-outline",
     "order": 10,
     "items": [
+      {
+        "label": "Dashboard",
+        "label_es": "Dashboard",
+        "url": "/plugins/inventory/",
+        "icon": "grid-outline"
+      },
       {
         "label": "Products",
         "label_es": "Productos",
@@ -68,6 +72,12 @@
         "icon": "albums-outline"
       },
       {
+        "label": "Reports",
+        "label_es": "Informes",
+        "url": "/plugins/inventory/reports/",
+        "icon": "stats-chart-outline"
+      },
+      {
         "label": "Settings",
         "label_es": "Configuración",
         "url": "/plugins/inventory/settings/",
@@ -75,7 +85,6 @@
       }
     ]
   },
-
   "settings": {
     "allow_negative_stock": {
       "type": "boolean",
@@ -84,15 +93,6 @@
       "label_es": "Permitir Stock Negativo",
       "description": "Allow products to have negative stock values",
       "description_es": "Permitir que los productos tengan valores de stock negativos"
-    },
-    "default_currency": {
-      "type": "string",
-      "default": "USD",
-      "choices": ["USD", "EUR", "MXN"],
-      "label": "Default Currency",
-      "label_es": "Moneda Predeterminada",
-      "description": "Default currency for product pricing",
-      "description_es": "Moneda predeterminada para precios de productos"
     },
     "low_stock_alert_enabled": {
       "type": "boolean",
@@ -103,7 +103,6 @@
       "description_es": "Enviar alertas cuando los productos alcancen el umbral de stock bajo"
     }
   },
-
   "api_endpoints": [
     {
       "path": "/api/list/",
@@ -146,25 +145,26 @@
       "description": "Import products from Excel"
     }
   ],
-
   "database": {
     "migrations": true,
-    "models": ["Product", "Category"]
+    "models": [
+      "Product",
+      "Category"
+    ]
   },
-
   "static_files": {
-    "css": ["inventory/css/inventory.css"],
+    "css": [
+      "inventory/css/inventory.css"
+    ],
     "js": [
       "inventory/js/avatar.js",
       "inventory/js/inventory.js"
     ]
   },
-
   "media_uploads": {
     "products": "inventory/products/images/",
     "categories": "inventory/categories/"
   },
-
   "changelog": {
     "1.0.0": {
       "date": "2025-01-04",

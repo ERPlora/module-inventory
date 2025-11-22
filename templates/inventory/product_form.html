@@ -1,0 +1,256 @@
+{% extends "core/app_base.html" %}
+{% load static %}
+{% load i18n %}
+{% load image_picker %}
+
+{% block title %}
+    {% if mode == 'create' %}{% trans "Crear Producto" %}
+    {% elif mode == 'edit' %}{% trans "Editar Producto" %}
+    {% else %}{% trans "Ver Producto" %}{% endif %} - CPOS Hub
+{% endblock %}
+
+{% block content %}
+<div class="p-4">
+    <ion-card class="m-4">
+        <ion-card-header class="p-0">
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button href="/plugins/inventory/products/" fill="clear">
+                        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
+                <ion-title>
+                    {% if mode == 'create' %}{% trans "Crear Producto" %}
+                    {% elif mode == 'edit' %}{% trans "Editar Producto" %}
+                    {% else %}{% trans "Ver Producto" %}{% endif %}
+                </ion-title>
+            </ion-toolbar>
+        </ion-card-header>
+
+        <form id="productForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <ion-card-content>
+                <!-- Error Message -->
+                {% if error_message %}
+                <div class="mb-4 p-4 rounded-lg" style="background: var(--ion-color-danger-tint); border-left: 4px solid var(--ion-color-danger);">
+                    <div class="flex items-center gap-2">
+                        <ion-icon name="alert-circle-outline" style="color: var(--ion-color-danger); font-size: 24px;"></ion-icon>
+                        <span style="color: var(--ion-color-danger);">{{ error_message }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                <!-- Imagen del Producto -->
+                <ion-item>
+                    <ion-label position="stacked">{% trans "Imagen del Producto" %}</ion-label>
+                    <div style="margin-top: 8px; width: 100%;">
+                        {% image_picker input_id="productImage" input_name="image" label="Seleccionar Imagen" icon="image-outline" show_preview=True %}
+                    </div>
+                    {% if product.image and mode != 'create' %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const preview = document.getElementById('productImagePreview');
+                            if (preview) {
+                                preview.src = '{{ product.image.url }}';
+                                preview.style.display = 'block';
+                            }
+                            const label = document.getElementById('productImageLabel');
+                            if (label) {
+                                label.textContent = '{{ product.image.name }}';
+                            }
+                        });
+                    </script>
+                    {% endif %}
+                </ion-item>
+
+                <!-- Nombre -->
+                <ion-item>
+                    <ion-input
+                        label="{% trans 'Nombre' %} *"
+                        label-placement="floating"
+                        name="name"
+                        value="{% if product %}{{ product.name }}{% endif %}"
+                        placeholder="{% trans 'Ingrese el nombre del producto' %}"
+                        required
+                        {% if readonly %}disabled{% endif %}>
+                    </ion-input>
+                </ion-item>
+
+                <!-- SKU -->
+                <ion-item>
+                    <ion-input
+                        label="{% trans 'SKU' %} *"
+                        label-placement="floating"
+                        name="sku"
+                        value="{% if product %}{{ product.sku }}{% endif %}"
+                        placeholder="{% trans 'Código único del producto' %}"
+                        required
+                        {% if readonly %}disabled{% endif %}>
+                    </ion-input>
+                </ion-item>
+
+                <!-- Descripción -->
+                <ion-item>
+                    <ion-textarea
+                        label="{% trans 'Descripción' %}"
+                        label-placement="floating"
+                        name="description"
+                        rows="3"
+                        placeholder="{% trans 'Descripción del producto' %}"
+                        {% if readonly %}disabled{% endif %}>{% if product %}{{ product.description }}{% endif %}</ion-textarea>
+                </ion-item>
+
+                <!-- Precio y Costo en dos columnas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ion-item>
+                        <ion-input
+                            label="{% trans 'Precio' %} *"
+                            label-placement="floating"
+                            name="price"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value="{% if product %}{{ product.price }}{% endif %}"
+                            placeholder="0.00"
+                            required
+                            {% if readonly %}disabled{% endif %}>
+                        </ion-input>
+                    </ion-item>
+
+                    <ion-item>
+                        <ion-input
+                            label="{% trans 'Costo' %}"
+                            label-placement="floating"
+                            name="cost"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value="{% if product %}{{ product.cost }}{% else %}0{% endif %}"
+                            placeholder="0.00"
+                            {% if readonly %}disabled{% endif %}>
+                        </ion-input>
+                    </ion-item>
+                </div>
+
+                <!-- Stock y Umbral en dos columnas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ion-item>
+                        <ion-input
+                            label="{% trans 'Stock' %}"
+                            label-placement="floating"
+                            name="stock"
+                            type="number"
+                            min="0"
+                            value="{% if product %}{{ product.stock }}{% else %}0{% endif %}"
+                            placeholder="0"
+                            {% if readonly %}disabled{% endif %}>
+                        </ion-input>
+                    </ion-item>
+
+                    <ion-item>
+                        <ion-input
+                            label="{% trans 'Umbral Stock Bajo' %}"
+                            label-placement="floating"
+                            name="low_stock_threshold"
+                            type="number"
+                            min="0"
+                            value="{% if product %}{{ product.low_stock_threshold }}{% else %}10{% endif %}"
+                            placeholder="10"
+                            {% if readonly %}disabled{% endif %}>
+                        </ion-input>
+                    </ion-item>
+                </div>
+
+                <!-- Categorías (Select múltiple con Ionic) -->
+                <ion-item>
+                    <ion-select
+                        id="categorySelect"
+                        name="category_names[]"
+                        label="{% trans 'Categorías' %}"
+                        label-placement="floating"
+                        multiple="true"
+                        placeholder="{% trans 'Seleccione categorías' %}"
+                        {% if readonly %}disabled{% endif %}>
+                        {% if categories %}
+                            {% for category in categories %}
+                            <ion-select-option value="{{ category.name }}">
+                                {{ category.name }}
+                            </ion-select-option>
+                            {% endfor %}
+                        {% endif %}
+                    </ion-select>
+                </ion-item>
+
+                {% if product and mode != 'create' %}
+                <script>
+                    document.addEventListener('DOMContentLoaded', async function() {
+                        const select = document.getElementById('categorySelect');
+
+                        // Categorías seleccionadas del producto
+                        const selectedCategories = [
+                            {% for category in product.categories.all %}
+                            "{{ category.name }}"{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ];
+
+                        console.log('Selected categories:', selectedCategories);
+
+                        if (select && selectedCategories.length > 0) {
+                            // Esperar a que el componente esté listo
+                            await select.componentOnReady();
+
+                            // Establecer el valor como array
+                            select.value = selectedCategories;
+
+                            console.log('Set select value to:', select.value);
+                        }
+                    });
+                </script>
+                {% endif %}
+
+                <!-- Información adicional en modo vista -->
+                {% if mode == 'view' and product %}
+                <div class="mt-4 p-4" style="background: var(--ion-color-light); border-radius: 8px;">
+                    <h3 class="text-lg font-semibold mb-2">{% trans "Información Adicional" %}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "Margen de Ganancia" %}</p>
+                            <p class="font-semibold">{{ product.profit_margin|floatformat:2 }}%</p>
+                        </div>
+                        <div>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "Estado Stock" %}</p>
+                            <p class="font-semibold">
+                                {% if product.is_low_stock %}
+                                    <span style="color: var(--ion-color-warning);">{% trans "Stock Bajo" %}</span>
+                                {% else %}
+                                    <span style="color: var(--ion-color-success);">{% trans "Stock Normal" %}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "Fecha de Creación" %}</p>
+                            <p class="font-semibold">{{ product.created_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "Última Actualización" %}</p>
+                            <p class="font-semibold">{{ product.updated_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Botones de Acción -->
+                {% if mode != 'view' %}
+                    <div class="mt-4">
+                        <ion-button type="submit" expand="block">
+                            <ion-icon slot="start" name="save-outline"></ion-icon>
+                            {% if mode == 'create' %}{% trans "Crear Producto" %}
+                            {% else %}{% trans "Guardar Cambios" %}{% endif %}
+                        </ion-button>
+                    </div>
+                {% endif %}
+            </ion-card-content>
+        </form>
+    </ion-card>
+</div>
+{% endblock %}
