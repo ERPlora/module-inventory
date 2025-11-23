@@ -347,18 +347,19 @@ def product_delete(request, pk):
 @login_required
 def export_csv(request):
     """
-    Exportar productos a CSV
+    Exportar productos a CSV con nombres de campo del modelo (inglés)
     """
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="productos.csv"'
     response.write('\ufeff')  # BOM para UTF-8
 
     writer = csv.writer(response)
-    writer.writerow(['SKU', 'Nombre', 'Descripción', 'Categoría', 'Precio', 'Costo', 'Stock', 'Umbral Stock Bajo'])
+    # Usar nombres de campo del modelo (field names en inglés)
+    writer.writerow(['sku', 'name', 'description', 'categories', 'price', 'cost', 'stock', 'low_stock_threshold', 'ean13'])
 
     products = Product.objects.filter(is_active=True)
     for product in products:
-        categories_names = ', '.join([cat.name for cat in product.categories.all()]) or 'Sin categoría'
+        categories_names = ', '.join([cat.name for cat in product.categories.all()]) if product.categories.exists() else ''
         writer.writerow([
             product.sku,
             product.name,
@@ -368,6 +369,7 @@ def export_csv(request):
             float(product.cost),
             product.stock,
             product.low_stock_threshold,
+            product.ean13 or '',
         ])
 
     return response
@@ -406,19 +408,20 @@ def import_csv(request):
         with transaction.atomic():
             for row in reader:
                 try:
-                    sku = row.get('SKU', '').strip()
+                    # Usar nombres de campo exactos de la base de datos (inglés)
+                    sku = row.get('sku', '').strip()
                     if not sku:
                         continue
 
                     # Validations
-                    name = row.get('Nombre', '').strip()
+                    name = row.get('name', '').strip()
                     if not name:
                         errors.append(f"Fila {reader.line_num}: El nombre es obligatorio")
                         continue
 
-                    price = Decimal(row.get('Precio', '0'))
-                    cost = Decimal(row.get('Costo', '0'))
-                    stock = int(row.get('Stock', '0'))
+                    price = Decimal(row.get('price', '0'))
+                    cost = Decimal(row.get('cost', '0'))
+                    stock = int(row.get('stock', '0'))
 
                     if price < 0:
                         errors.append(f"Fila {reader.line_num}: El precio no puede ser negativo")
@@ -433,10 +436,10 @@ def import_csv(request):
                         continue
 
                     # Get or create categories (comma-separated)
-                    categories_str = row.get('Categoría', '').strip()
+                    categories_str = row.get('categories', '').strip()
                     categories_list = []
                     if categories_str:
-                        category_names = [name.strip() for name in categories_str.split(',')]
+                        category_names = [cat_name.strip() for cat_name in categories_str.split(',')]
                         for cat_name in category_names:
                             if cat_name:
                                 category, _ = Category.objects.get_or_create(
@@ -449,11 +452,12 @@ def import_csv(request):
                         sku=sku,
                         defaults={
                             'name': name,
-                            'description': row.get('Descripción', ''),
+                            'description': row.get('description', ''),
                             'price': price,
                             'cost': cost,
                             'stock': stock,
-                            'low_stock_threshold': int(row.get('Umbral Stock Bajo', '10')),
+                            'low_stock_threshold': int(row.get('low_stock_threshold', '10')),
+                            'ean13': row.get('ean13', '') or None,
                         }
                     )
 
@@ -1061,122 +1065,6 @@ def export_categories_excel(request):
 
 @login_required
 @require_http_methods(["POST"])
-def import_csv(request):
-    """
-    Import products from CSV file
-    Links categories by NAME (normalized, first letter capitalized), not by ID
-    """
-    if 'file' not in request.FILES:
-        return JsonResponse({'error': 'No file provided'}, status=400)
-
-    file = request.FILES['file']
-
-    # Validate file extension
-    if not file.name.endswith('.csv'):
-        return JsonResponse({'error': 'Invalid file format. Please upload a CSV file.'}, status=400)
-
-    try:
-        # Read CSV file
-        decoded_file = file.read().decode('utf-8')
-        csv_reader = csv.DictReader(io.StringIO(decoded_file))
-
-        created_count = 0
-        updated_count = 0
-        errors = []
-
-        with transaction.atomic():
-            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (header is row 1)
-                try:
-                    # Extract and clean data
-                    name = row.get('Name', '').strip()
-                    sku = row.get('SKU', '').strip()
-
-                    if not name or not sku:
-                        errors.append(f"Row {row_num}: Name and SKU are required")
-                        continue
-
-                    # Extract other fields
-                    description = row.get('Description', '').strip()
-                    price = Decimal(row.get('Price', 0))
-                    cost = Decimal(row.get('Cost', 0))
-                    stock = int(row.get('Stock', 0))
-                    low_stock_threshold = int(row.get('Low Stock Threshold', 10))
-                    ean13 = row.get('EAN-13', '').strip()
-
-                    # Check if product exists (by SKU)
-                    product, created = Product.objects.get_or_create(
-                        sku=sku,
-                        defaults={
-                            'name': name,
-                            'description': description,
-                            'price': price,
-                            'cost': cost,
-                            'stock': stock,
-                            'low_stock_threshold': low_stock_threshold,
-                            'ean13': ean13 if ean13 else '',
-                        }
-                    )
-
-                    if not created:
-                        # Update existing product
-                        product.name = name
-                        product.description = description
-                        product.price = price
-                        product.cost = cost
-                        product.stock = stock
-                        product.low_stock_threshold = low_stock_threshold
-                        if ean13:
-                            product.ean13 = ean13
-                        product.save()
-                        updated_count += 1
-                    else:
-                        created_count += 1
-
-                    # Handle categories - LINK BY NAME (normalized)
-                    categories_str = row.get('Categories', '').strip()
-                    if categories_str:
-                        # Clear existing categories
-                        product.categories.clear()
-
-                        # Split by comma and process each category
-                        category_names = [c.strip() for c in categories_str.split(',') if c.strip()]
-
-                        for cat_name in category_names:
-                            # Normalize: first letter capitalized, rest lowercase
-                            normalized_name = cat_name.capitalize()
-
-                            # Find or create category by normalized name
-                            category, _ = Category.objects.get_or_create(
-                                name__iexact=normalized_name,  # Case-insensitive lookup
-                                defaults={'name': normalized_name}
-                            )
-
-                            # Add to product
-                            product.categories.add(category)
-
-                except Exception as e:
-                    errors.append(f"Row {row_num}: {str(e)}")
-                    continue
-
-        # Prepare response message
-        message = f"Import completed: {created_count} products created, {updated_count} updated"
-        if errors:
-            message += f". {len(errors)} errors occurred."
-
-        return JsonResponse({
-            'success': True,
-            'message': message,
-            'created': created_count,
-            'updated': updated_count,
-            'errors': errors
-        })
-
-    except Exception as e:
-        return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=500)
-
-
-@login_required
-@require_http_methods(["POST"])
 def import_excel(request):
     """
     Import products from Excel file
@@ -1277,11 +1165,11 @@ def import_excel(request):
                             # Normalize: first letter capitalized, rest lowercase
                             normalized_name = cat_name.capitalize()
 
-                            # Find or create category by normalized name
-                            category, _ = Category.objects.get_or_create(
-                                name__iexact=normalized_name,  # Case-insensitive lookup
-                                defaults={'name': normalized_name}
-                            )
+                            # Find category (case-insensitive lookup)
+                            category = Category.objects.filter(name__iexact=normalized_name).first()
+                            if not category:
+                                # Create if doesn't exist
+                                category = Category.objects.create(name=normalized_name)
 
                             # Add to product
                             product.categories.add(category)
