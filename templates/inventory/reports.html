@@ -6,13 +6,20 @@
 
 {% block content %}
 <div class="p-4">
-    <!-- Page Header -->
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold" style="color: var(--ion-text-color);">{% trans "Informes de Inventario" %}</h1>
-        <p class="text-sm mt-2" style="color: var(--ion-color-medium);">{% trans "Análisis y estadísticas del inventario" %}</p>
-    </div>
+    <ion-card class="m-4">
+        <ion-card-header class="p-0">
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button href="/plugins/inventory/" fill="clear">
+                        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
+                <ion-title>{% trans "Informes de Inventario" %}</ion-title>
+            </ion-toolbar>
+        </ion-card-header>
 
-    <!-- Stats Cards -->
+        <ion-card-content>
+            <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <ion-card class="m-0">
             <ion-card-content class="p-6">
@@ -307,8 +314,10 @@
                     </tbody>
                 </table>
             </div>
+            </ion-card-content>
+        </ion-card>
+        {% endif %}
         </ion-card-content>
     </ion-card>
-    {% endif %}
 </div>
 {% endblock %}

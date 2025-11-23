@@ -137,6 +137,14 @@ class Product(models.Model):
     """
     name = models.CharField(max_length=255, verbose_name="Nombre")
     sku = models.CharField(max_length=100, unique=True, verbose_name="SKU")
+    ean13 = models.CharField(
+        max_length=13,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="EAN-13",
+        help_text="Código de barras EAN-13 (13 dígitos)"
+    )
     description = models.TextField(blank=True, verbose_name="Descripción")
     price = models.DecimalField(
         max_digits=10,

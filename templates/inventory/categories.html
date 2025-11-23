@@ -6,45 +6,59 @@
 
 {% block content %}
 <div class="p-4">
-    <!-- Categories Table -->
-    <ion-card class="my-4">
-        <ion-card-header>
-            <div class="flex justify-between items-center flex-wrap gap-3">
-                <ion-card-title>{% trans "Categorías" %}</ion-card-title>
-                <div class="flex gap-2 flex-wrap">
-                    <ion-button size="large" href="/plugins/inventory/categories/create/">
-                        <ion-icon slot="start" name="add-outline"></ion-icon>
-                        {% trans "Nueva Categoría" %}
+    <ion-card class="m-4">
+        <ion-card-header class="p-0">
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button href="/plugins/inventory/" fill="clear">
+                        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
+                <ion-title>{% trans "Categorías" %}</ion-title>
+            </ion-toolbar>
+        </ion-card-header>
+
+        <ion-card-content>
+            <!-- Search Bar and Action Buttons -->
+            <div class="flex flex-col md:flex-row gap-3 mb-4">
+                <!-- Search Bar -->
+                <div class="relative flex-1">
+                    <ion-icon
+                        name="search-outline"
+                        class="absolute left-3 top-1/2 -translate-y-1/2"
+                        style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
+                    </ion-icon>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search|default:'' }}"
+                        placeholder="{% trans 'Buscar categorías...' %}"
+                        class="w-full h-10 pl-10 pr-3 rounded-lg"
+                        style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
+                        hx-get="{{ request.path }}"
+                        hx-trigger="keyup changed delay:400ms"
+                        hx-target="#categories-table-container"
+                        hx-include="[name='page'],[name='order_by'],[name='per_page']"
+                        hx-push-url="true">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                    <ion-button size="default" fill="outline" onclick="document.getElementById('importCategoryFileInput').click()" title="{% trans 'Importar CSV/Excel' %}">
+                        <ion-icon slot="icon-only" name="cloud-upload-outline"></ion-icon>
+                    </ion-button>
+                    <input type="file" id="importCategoryFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="handleCategoryFileImport(this)">
+                    <ion-button size="default" fill="outline" href="/plugins/inventory/categories/export/csv/" title="{% trans 'Exportar a CSV' %}">
+                        <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button size="default" href="/plugins/inventory/categories/create/" title="{% trans 'Nueva Categoría' %}">
+                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
                     </ion-button>
                 </div>
             </div>
-        </ion-card-header>
 
-        <!-- Search Bar -->
-        <div class="px-4 pb-4">
-            <div class="relative flex-1">
-                <ion-icon
-                    name="search-outline"
-                    class="absolute left-3 top-1/2 -translate-y-1/2"
-                    style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
-                </ion-icon>
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ request.GET.search|default:'' }}"
-                    placeholder="{% trans 'Buscar categorías...' %}"
-                    class="w-full h-10 pl-10 pr-3 rounded-lg"
-                    style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
-                    hx-get="{{ request.path }}"
-                    hx-trigger="keyup changed delay:400ms"
-                    hx-target="#categories-table-container"
-                    hx-include="[name='page'],[name='order_by'],[name='per_page']"
-                    hx-push-url="true">
-            </div>
-        </div>
-
-        <!-- Table Container (HTMX updates this) -->
-        <div id="categories-table-container">
+            <!-- Table Container (HTMX updates this) -->
+            <div id="categories-table-container">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead style="background: var(--ion-color-step-50);">
@@ -113,10 +127,145 @@
                 </table>
             </div>
 
-            <ion-card-content>
+            <div class="px-4 py-2">
                 {% include "inventory/partials/categories_pagination.html" %}
-            </ion-card-content>
-        </div>
+            </div>
+            </div>
+        </ion-card-content>
     </ion-card>
 </div>
+
+<script>
+async function confirmDeleteCategory(categoryId, categoryName, buttonElement) {
+    const alert = document.createElement('ion-alert');
+    alert.header = '{% trans "Confirmar Eliminación" %}';
+    alert.message = `{% trans "¿Estás seguro de que deseas eliminar la categoría" %} "${categoryName}"?`;
+    alert.buttons = [
+        {
+            text: '{% trans "Cancelar" %}',
+            role: 'cancel',
+            cssClass: 'secondary'
+        },
+        {
+            text: '{% trans "Eliminar" %}',
+            role: 'confirm',
+            cssClass: 'danger',
+            handler: () => {
+                const row = buttonElement.closest('tr');
+                fetch(`/plugins/inventory/categories/delete/${categoryId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Fade out and remove row
+                        row.style.transition = 'opacity 0.5s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 500);
+
+                        // Show success toast
+                        showToast('{% trans "Categoría eliminada exitosamente" %}', 'success');
+                    } else {
+                        showToast('{% trans "Error al eliminar la categoría" %}', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+                    showToast('{% trans "Error al eliminar la categoría" %}', 'danger');
+                });
+            }
+        }
+    ];
+
+    document.body.appendChild(alert);
+    await alert.present();
+}
+
+async function showToast(message, color = 'primary') {
+    const toast = document.createElement('ion-toast');
+    toast.message = message;
+    toast.duration = 2000;
+    toast.color = color;
+    toast.position = 'top';
+    document.body.appendChild(toast);
+    await toast.present();
+}
+
+async function handleCategoryFileImport(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Determine the import URL based on file extension
+    const fileName = file.name.toLowerCase();
+    let importUrl;
+    if (fileName.endsWith('.csv')) {
+        importUrl = '/plugins/inventory/categories/import/csv/';
+    } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        importUrl = '/plugins/inventory/categories/import/excel/';
+    } else {
+        await showToast('{% trans "Formato de archivo no válido. Use CSV o Excel" %}', 'danger');
+        input.value = '';
+        return;
+    }
+
+    // Show loading toast
+    const loadingToast = document.createElement('ion-toast');
+    loadingToast.message = '{% trans "Importando categorías..." %}';
+    loadingToast.duration = 0; // Keep showing until we dismiss it
+    loadingToast.position = 'top';
+    document.body.appendChild(loadingToast);
+    await loadingToast.present();
+
+    try {
+        const response = await fetch(importUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            }
+        });
+
+        const result = await response.json();
+
+        // Dismiss loading toast
+        await loadingToast.dismiss();
+
+        if (response.ok) {
+            // Show success message
+            await showToast(`✓ ${result.message || '{% trans "Categorías importadas exitosamente" %}'}`, 'success');
+
+            // Reload the table
+            window.location.reload();
+        } else {
+            // Show error message
+            await showToast(`✗ ${result.error || '{% trans "Error al importar categorías" %}'}`, 'danger');
+        }
+    } catch (error) {
+        await loadingToast.dismiss();
+        console.error('Import error:', error);
+        await showToast('{% trans "Error al importar categorías" %}', 'danger');
+    }
+
+    // Reset file input
+    input.value = '';
+}
+
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) return csrfInput.value;
+
+    // Try to get from cookie if not in DOM
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+    }
+    return '';
+}
+</script>
 {% endblock %}

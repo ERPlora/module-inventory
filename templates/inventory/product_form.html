@@ -1,7 +1,6 @@
 {% extends "core/app_base.html" %}
 {% load static %}
 {% load i18n %}
-{% load image_picker %}
 
 {% block title %}
     {% if mode == 'create' %}{% trans "Crear Producto" %}
@@ -43,25 +42,71 @@
                 <!-- Imagen del Producto -->
                 <ion-item>
                     <ion-label position="stacked">{% trans "Imagen del Producto" %}</ion-label>
-                    <div style="margin-top: 8px; width: 100%;">
-                        {% image_picker input_id="productImage" input_name="image" label="Seleccionar Imagen" icon="image-outline" show_preview=True %}
+                    <div style="width: 100%; margin-top: 8px;">
+                        <div class="flex items-center justify-center w-full" id="dropzoneContainer">
+                            <label for="productImage" id="dropzoneLabel" class="flex flex-col items-center justify-center w-full h-40 bg-neutral-secondary-medium border-2 border-dashed border-default-strong rounded-base cursor-pointer hover:bg-neutral-tertiary-medium">
+                                <div class="flex flex-col items-center justify-center text-body pt-5 pb-6">
+                                    <svg class="w-8 h-8 mb-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"/>
+                                    </svg>
+                                    <p class="mb-1 text-sm"><span class="font-semibold">{% trans "Click to upload" %}</span> {% trans "or drag and drop" %}</p>
+                                    <p class="text-xs text-center">{% trans "PNG, JPG or GIF (MAX. 800x400px)" %}</p>
+                                </div>
+                                <input id="productImage" name="image" type="file" class="hidden" accept="image/*" />
+                            </label>
+                        </div>
+                        <div id="productImagePreview" style="margin-top: 12px; display: none; text-align: center;">
+                            <img id="productImagePreviewImg" src="" alt="Preview" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <button type="button" id="removeImageBtn" style="margin-top: 8px; padding: 6px 12px; background: var(--ion-color-danger); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                {% trans "Remove Image" %}
+                            </button>
+                        </div>
                     </div>
-                    {% if product.image and mode != 'create' %}
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const preview = document.getElementById('productImagePreview');
-                            if (preview) {
-                                preview.src = '{{ product.image.url }}';
-                                preview.style.display = 'block';
-                            }
-                            const label = document.getElementById('productImageLabel');
-                            if (label) {
-                                label.textContent = '{{ product.image.name }}';
-                            }
-                        });
-                    </script>
-                    {% endif %}
                 </ion-item>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const fileInput = document.getElementById('productImage');
+                        const previewDiv = document.getElementById('productImagePreview');
+                        const previewImg = document.getElementById('productImagePreviewImg');
+                        const dropzoneLabel = document.getElementById('dropzoneLabel');
+                        const removeBtn = document.getElementById('removeImageBtn');
+
+                        // Show existing image if editing
+                        {% if product.image and mode != 'create' %}
+                        if (previewDiv && previewImg) {
+                            previewImg.src = '{{ product.image.url }}';
+                            previewDiv.style.display = 'block';
+                            dropzoneLabel.style.display = 'none';
+                        }
+                        {% endif %}
+
+                        // Preview on file select
+                        if (fileInput && previewDiv && previewImg) {
+                            fileInput.addEventListener('change', function(e) {
+                                const file = e.target.files[0];
+                                if (file && file.type.startsWith('image/')) {
+                                    const reader = new FileReader();
+                                    reader.onload = function(event) {
+                                        previewImg.src = event.target.result;
+                                        previewDiv.style.display = 'block';
+                                        dropzoneLabel.style.display = 'none';
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            });
+                        }
+
+                        // Remove image button
+                        if (removeBtn) {
+                            removeBtn.addEventListener('click', function() {
+                                fileInput.value = '';
+                                previewDiv.style.display = 'none';
+                                dropzoneLabel.style.display = 'flex';
+                                previewImg.src = '';
+                            });
+                        }
+                    });
+                </script>
 
                 <!-- Nombre -->
                 <ion-item>
@@ -76,18 +121,32 @@
                     </ion-input>
                 </ion-item>
 
-                <!-- SKU -->
-                <ion-item>
-                    <ion-input
-                        label="{% trans 'SKU' %} *"
-                        label-placement="floating"
-                        name="sku"
-                        value="{% if product %}{{ product.sku }}{% endif %}"
-                        placeholder="{% trans 'Código único del producto' %}"
-                        required
-                        {% if readonly %}disabled{% endif %}>
-                    </ion-input>
-                </ion-item>
+                <!-- SKU y EAN-13 en dos columnas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ion-item>
+                        <ion-input
+                            label="{% trans 'SKU' %} *"
+                            label-placement="floating"
+                            name="sku"
+                            value="{% if product %}{{ product.sku }}{% endif %}"
+                            placeholder="{% trans 'Código único del producto' %}"
+                            required
+                            {% if readonly %}disabled{% endif %}>
+                        </ion-input>
+                    </ion-item>
+
+                    <ion-item>
+                        <ion-input
+                            label="{% trans 'EAN-13' %}"
+                            label-placement="floating"
+                            name="ean13"
+                            maxlength="13"
+                            value="{% if product %}{{ product.ean13 }}{% endif %}"
+                            placeholder="{% trans 'Código de barras EAN-13 (13 dígitos)' %}"
+                            {% if readonly %}disabled{% endif %}>
+                        </ion-input>
+                    </ion-item>
+                </div>
 
                 <!-- Descripción -->
                 <ion-item>
@@ -213,6 +272,16 @@
                 <div class="mt-4 p-4" style="background: var(--ion-color-light); border-radius: 8px;">
                     <h3 class="text-lg font-semibold mb-2">{% trans "Información Adicional" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "SKU" %}</p>
+                            <p class="font-semibold font-mono">{{ product.sku }}</p>
+                        </div>
+                        {% if product.ean13 %}
+                        <div>
+                            <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "EAN-13" %}</p>
+                            <p class="font-semibold font-mono">{{ product.ean13 }}</p>
+                        </div>
+                        {% endif %}
                         <div>
                             <p class="text-sm" style="color: var(--ion-color-medium);">{% trans "Margen de Ganancia" %}</p>
                             <p class="font-semibold">{{ product.profit_margin|floatformat:2 }}%</p>

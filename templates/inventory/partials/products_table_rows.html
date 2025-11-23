@@ -57,17 +57,25 @@
                 <ion-button size="large" fill="clear" href="/plugins/inventory/products/{{ product.id }}/edit/" title="{% trans 'Editar' %}">
                     <ion-icon slot="icon-only" name="create-outline"></ion-icon>
                 </ion-button>
+                {% if barcode_enabled %}
+                <ion-button size="large" fill="clear"  id="barcode-btn-{{ product.id }}" title="{% trans 'Imprimir Código de Barras' %}">
+                    <ion-icon slot="icon-only" name="barcode-outline"></ion-icon>
+                </ion-button>
+                {% endif %}
                 <ion-button size="large" fill="clear" color="danger"
-                            hx-delete="/plugins/inventory/products/{{ product.id }}/delete/"
-                            hx-confirm="{% trans '¿Eliminar este producto?' %}"
-                            hx-target="closest tr"
-                            hx-swap="outerHTML swap:1s"
+                            onclick="confirmDeleteProduct({{ product.id }}, '{{ product.name|escapejs }}', this)"
                             title="{% trans 'Eliminar' %}">
                     <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
                 </ion-button>
             </div>
         </td>
     </tr>
+
+    <!-- Barcode Modal for this product -->
+    {% if barcode_enabled %}
+    {% include "inventory/partials/barcode_modal.html" %}
+    {% endif %}
+
     {% empty %}
     <tr>
         <td colspan="7" class="text-center py-12" style="color: var(--ion-color-medium);">

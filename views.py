@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import os
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
@@ -53,7 +54,7 @@ def products_list(request):
     from .models import ProductsConfig
 
     # Filtrar productos
-    queryset = Product.objects.filter(is_active=True).select_related().prefetch_related('categories')
+    queryset = Product.objects.filter(is_active=True).prefetch_related('categories')
 
     # Búsqueda
     if request.GET.get('search'):
@@ -65,8 +66,10 @@ def products_list(request):
         ).distinct()
 
     # Ordenamiento
-    if request.GET.get('order_by'):
-        queryset = queryset.order_by(request.GET['order_by'])
+    allowed_order_fields = ['name', '-name', 'sku', '-sku', 'price', '-price', 'stock', '-stock', 'id', '-id']
+    order_by = request.GET.get('order_by', '-id')
+    if order_by in allowed_order_fields:
+        queryset = queryset.order_by(order_by)
     else:
         queryset = queryset.order_by('-id')  # Default ordering
 
@@ -926,6 +929,7 @@ def generate_barcode(request, product_id):
     """
     Generate barcode SVG for a product
     Returns SVG image directly
+    Supports: ?type=sku (CODE128) or ?type=ean13 (EAN-13)
     """
     from .barcode_utils import generate_barcode_svg
     from .models import ProductsConfig
@@ -941,8 +945,20 @@ def generate_barcode(request, product_id):
     try:
         product = get_object_or_404(Product, id=product_id)
 
-        # Generate barcode SVG
-        svg_content = generate_barcode_svg(product.sku, format_type='code128')
+        # Get barcode type from query parameter (default to sku)
+        barcode_type = request.GET.get('type', 'sku')
+
+        if barcode_type == 'ean13':
+            if not product.ean13:
+                return HttpResponse(
+                    '<svg><text x="50%" y="50%" text-anchor="middle" fill="red">No EAN-13 available</text></svg>',
+                    content_type='image/svg+xml'
+                )
+            # Generate EAN-13 barcode
+            svg_content = generate_barcode_svg(product.ean13, format_type='ean13')
+        else:
+            # Generate SKU barcode (CODE128)
+            svg_content = generate_barcode_svg(product.sku, format_type='code128')
 
         return HttpResponse(svg_content, content_type='image/svg+xml')
 
@@ -957,3 +973,525 @@ def generate_barcode(request, product_id):
             "error": "Error generating barcode"
         }, status=500)
 
+
+
+@login_required
+def export_categories_csv(request):
+    """Export categories to CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="categories.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Name', 'Description', 'Icon', 'Color', 'Order', 'Product Count'])
+    
+    categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+    for category in categories:
+        product_count = category.products.filter(is_active=True).count()
+        writer.writerow([
+            category.id,
+            category.name,
+            category.description or '',
+            category.icon,
+            category.color,
+            category.order,
+            product_count
+        ])
+    
+    return response
+
+
+@login_required
+def export_categories_excel(request):
+    """Export categories to Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from django.http import HttpResponse
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Categories"
+    
+    # Headers
+    headers = ['ID', 'Name', 'Description', 'Icon', 'Color', 'Order', 'Product Count']
+    ws.append(headers)
+    
+    # Style headers
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+    
+    # Data
+    categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+    for category in categories:
+        product_count = category.products.filter(is_active=True).count()
+        ws.append([
+            category.id,
+            category.name,
+            category.description or '',
+            category.icon,
+            category.color,
+            category.order,
+            product_count
+        ])
+    
+    # Adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="categories.xlsx"'
+    wb.save(response)
+
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_csv(request):
+    """
+    Import products from CSV file
+    Links categories by NAME (normalized, first letter capitalized), not by ID
+    """
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    file = request.FILES['file']
+
+    # Validate file extension
+    if not file.name.endswith('.csv'):
+        return JsonResponse({'error': 'Invalid file format. Please upload a CSV file.'}, status=400)
+
+    try:
+        # Read CSV file
+        decoded_file = file.read().decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(decoded_file))
+
+        created_count = 0
+        updated_count = 0
+        errors = []
+
+        with transaction.atomic():
+            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (header is row 1)
+                try:
+                    # Extract and clean data
+                    name = row.get('Name', '').strip()
+                    sku = row.get('SKU', '').strip()
+
+                    if not name or not sku:
+                        errors.append(f"Row {row_num}: Name and SKU are required")
+                        continue
+
+                    # Extract other fields
+                    description = row.get('Description', '').strip()
+                    price = Decimal(row.get('Price', 0))
+                    cost = Decimal(row.get('Cost', 0))
+                    stock = int(row.get('Stock', 0))
+                    low_stock_threshold = int(row.get('Low Stock Threshold', 10))
+                    ean13 = row.get('EAN-13', '').strip()
+
+                    # Check if product exists (by SKU)
+                    product, created = Product.objects.get_or_create(
+                        sku=sku,
+                        defaults={
+                            'name': name,
+                            'description': description,
+                            'price': price,
+                            'cost': cost,
+                            'stock': stock,
+                            'low_stock_threshold': low_stock_threshold,
+                            'ean13': ean13 if ean13 else '',
+                        }
+                    )
+
+                    if not created:
+                        # Update existing product
+                        product.name = name
+                        product.description = description
+                        product.price = price
+                        product.cost = cost
+                        product.stock = stock
+                        product.low_stock_threshold = low_stock_threshold
+                        if ean13:
+                            product.ean13 = ean13
+                        product.save()
+                        updated_count += 1
+                    else:
+                        created_count += 1
+
+                    # Handle categories - LINK BY NAME (normalized)
+                    categories_str = row.get('Categories', '').strip()
+                    if categories_str:
+                        # Clear existing categories
+                        product.categories.clear()
+
+                        # Split by comma and process each category
+                        category_names = [c.strip() for c in categories_str.split(',') if c.strip()]
+
+                        for cat_name in category_names:
+                            # Normalize: first letter capitalized, rest lowercase
+                            normalized_name = cat_name.capitalize()
+
+                            # Find or create category by normalized name
+                            category, _ = Category.objects.get_or_create(
+                                name__iexact=normalized_name,  # Case-insensitive lookup
+                                defaults={'name': normalized_name}
+                            )
+
+                            # Add to product
+                            product.categories.add(category)
+
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    continue
+
+        # Prepare response message
+        message = f"Import completed: {created_count} products created, {updated_count} updated"
+        if errors:
+            message += f". {len(errors)} errors occurred."
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'created': created_count,
+            'updated': updated_count,
+            'errors': errors
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_excel(request):
+    """
+    Import products from Excel file
+    Links categories by NAME (normalized, first letter capitalized), not by ID
+    """
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    file = request.FILES['file']
+
+    # Validate file extension
+    if not (file.name.endswith('.xlsx') or file.name.endswith('.xls')):
+        return JsonResponse({'error': 'Invalid file format. Please upload an Excel file.'}, status=400)
+
+    try:
+        from openpyxl import load_workbook
+
+        # Load workbook
+        wb = load_workbook(file, read_only=True, data_only=True)
+        ws = wb.active
+
+        # Get header row
+        headers = [cell.value for cell in ws[1]]
+
+        # Create header mapping (case-insensitive)
+        header_map = {h.lower(): i for i, h in enumerate(headers) if h}
+
+        created_count = 0
+        updated_count = 0
+        errors = []
+
+        with transaction.atomic():
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    # Helper function to get cell value by header name
+                    def get_value(header_name, default=''):
+                        idx = header_map.get(header_name.lower())
+                        if idx is not None and idx < len(row):
+                            val = row[idx]
+                            return str(val).strip() if val is not None else default
+                        return default
+
+                    # Extract and clean data
+                    name = get_value('Name')
+                    sku = get_value('SKU')
+
+                    if not name or not sku:
+                        errors.append(f"Row {row_num}: Name and SKU are required")
+                        continue
+
+                    # Extract other fields
+                    description = get_value('Description')
+                    price = Decimal(get_value('Price', '0'))
+                    cost = Decimal(get_value('Cost', '0'))
+                    stock = int(float(get_value('Stock', '0')))
+                    low_stock_threshold = int(float(get_value('Low Stock Threshold', '10')))
+                    ean13 = get_value('EAN-13')
+
+                    # Check if product exists (by SKU)
+                    product, created = Product.objects.get_or_create(
+                        sku=sku,
+                        defaults={
+                            'name': name,
+                            'description': description,
+                            'price': price,
+                            'cost': cost,
+                            'stock': stock,
+                            'low_stock_threshold': low_stock_threshold,
+                            'ean13': ean13 if ean13 else '',
+                        }
+                    )
+
+                    if not created:
+                        # Update existing product
+                        product.name = name
+                        product.description = description
+                        product.price = price
+                        product.cost = cost
+                        product.stock = stock
+                        product.low_stock_threshold = low_stock_threshold
+                        if ean13:
+                            product.ean13 = ean13
+                        product.save()
+                        updated_count += 1
+                    else:
+                        created_count += 1
+
+                    # Handle categories - LINK BY NAME (normalized)
+                    categories_str = get_value('Categories')
+                    if categories_str:
+                        # Clear existing categories
+                        product.categories.clear()
+
+                        # Split by comma and process each category
+                        category_names = [c.strip() for c in categories_str.split(',') if c.strip()]
+
+                        for cat_name in category_names:
+                            # Normalize: first letter capitalized, rest lowercase
+                            normalized_name = cat_name.capitalize()
+
+                            # Find or create category by normalized name
+                            category, _ = Category.objects.get_or_create(
+                                name__iexact=normalized_name,  # Case-insensitive lookup
+                                defaults={'name': normalized_name}
+                            )
+
+                            # Add to product
+                            product.categories.add(category)
+
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    continue
+
+        # Prepare response message
+        message = f"Import completed: {created_count} products created, {updated_count} updated"
+        if errors:
+            message += f". {len(errors)} errors occurred."
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'created': created_count,
+            'updated': updated_count,
+            'errors': errors
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_categories_csv(request):
+    """
+    Import categories from CSV file
+    Links categories by NAME (normalized, first letter capitalized)
+    """
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    file = request.FILES['file']
+
+    # Validate file extension
+    if not file.name.endswith('.csv'):
+        return JsonResponse({'error': 'Invalid file format. Please upload a CSV file.'}, status=400)
+
+    try:
+        # Read CSV file
+        decoded_file = file.read().decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(decoded_file))
+
+        created_count = 0
+        updated_count = 0
+        errors = []
+
+        with transaction.atomic():
+            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (header is row 1)
+                try:
+                    # Extract and clean data
+                    name = row.get('Name', '').strip()
+
+                    if not name:
+                        errors.append(f"Row {row_num}: Name is required")
+                        continue
+
+                    # Normalize name: first letter capitalized
+                    normalized_name = name.capitalize()
+
+                    # Extract other fields
+                    description = row.get('Description', '').strip()
+                    icon = row.get('Icon', 'pricetag-outline').strip()
+                    color = row.get('Color', 'primary').strip()
+                    order = int(row.get('Order', 100))
+
+                    # Check if category exists (by normalized name, case-insensitive)
+                    category = Category.objects.filter(name__iexact=normalized_name).first()
+
+                    if category:
+                        # Update existing category
+                        category.description = description
+                        category.icon = icon
+                        category.color = color
+                        category.order = order
+                        category.save()
+                        updated_count += 1
+                    else:
+                        # Create new category
+                        Category.objects.create(
+                            name=normalized_name,
+                            description=description,
+                            icon=icon,
+                            color=color,
+                            order=order
+                        )
+                        created_count += 1
+
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    continue
+
+        # Prepare response message
+        message = f"Import completed: {created_count} categories created, {updated_count} updated"
+        if errors:
+            message += f". {len(errors)} errors occurred."
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'created': created_count,
+            'updated': updated_count,
+            'errors': errors
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_categories_excel(request):
+    """
+    Import categories from Excel file
+    Links categories by NAME (normalized, first letter capitalized)
+    """
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    file = request.FILES['file']
+
+    # Validate file extension
+    if not (file.name.endswith('.xlsx') or file.name.endswith('.xls')):
+        return JsonResponse({'error': 'Invalid file format. Please upload an Excel file.'}, status=400)
+
+    try:
+        from openpyxl import load_workbook
+
+        # Load workbook
+        wb = load_workbook(file, read_only=True, data_only=True)
+        ws = wb.active
+
+        # Get header row
+        headers = [cell.value for cell in ws[1]]
+
+        # Create header mapping (case-insensitive)
+        header_map = {h.lower(): i for i, h in enumerate(headers) if h}
+
+        created_count = 0
+        updated_count = 0
+        errors = []
+
+        with transaction.atomic():
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    # Helper function to get cell value by header name
+                    def get_value(header_name, default=''):
+                        idx = header_map.get(header_name.lower())
+                        if idx is not None and idx < len(row):
+                            val = row[idx]
+                            return str(val).strip() if val is not None else default
+                        return default
+
+                    # Extract and clean data
+                    name = get_value('Name')
+
+                    if not name:
+                        errors.append(f"Row {row_num}: Name is required")
+                        continue
+
+                    # Normalize name: first letter capitalized
+                    normalized_name = name.capitalize()
+
+                    # Extract other fields
+                    description = get_value('Description')
+                    icon = get_value('Icon', 'pricetag-outline')
+                    color = get_value('Color', 'primary')
+                    order = int(float(get_value('Order', '100')))
+
+                    # Check if category exists (by normalized name, case-insensitive)
+                    category = Category.objects.filter(name__iexact=normalized_name).first()
+
+                    if category:
+                        # Update existing category
+                        category.description = description
+                        category.icon = icon
+                        category.color = color
+                        category.order = order
+                        category.save()
+                        updated_count += 1
+                    else:
+                        # Create new category
+                        Category.objects.create(
+                            name=normalized_name,
+                            description=description,
+                            icon=icon,
+                            color=color,
+                            order=order
+                        )
+                        created_count += 1
+
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    continue
+
+        # Prepare response message
+        message = f"Import completed: {created_count} categories created, {updated_count} updated"
+        if errors:
+            message += f". {len(errors)} errors occurred."
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'created': created_count,
+            'updated': updated_count,
+            'errors': errors
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=500)

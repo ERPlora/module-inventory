@@ -26,6 +26,10 @@ urlpatterns = [
     path('categories/edit/<int:pk>/', views.category_edit, name='category_edit'),
     path('categories/delete/<int:pk>/', views.category_delete, name='category_delete'),
     path('categories/api/', views.categories_list, name='categories_list'),
+    path('categories/export/csv/', views.export_categories_csv, name='export_categories_csv'),
+    path('categories/export/excel/', views.export_categories_excel, name='export_categories_excel'),
+    path('categories/import/csv/', views.import_categories_csv, name='import_categories_csv'),
+    path('categories/import/excel/', views.import_categories_excel, name='import_categories_excel'),
 
     # Reports
     path('reports/', views.reports_view, name='reports'),

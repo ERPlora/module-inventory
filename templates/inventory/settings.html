@@ -8,18 +8,19 @@
 {% block content %}
 {% csrf_token %}
 <div x-data="settingsApp()" x-init="init()" class="p-4">
-    <!-- Header -->
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold mb-2" style="color: var(--ion-text-color);">
-            Configuración de Inventario
-        </h2>
-        <p style="color: var(--ion-color-medium);">
-            Configura el comportamiento del plugin de inventario. Los cambios se guardan automáticamente.
-        </p>
-    </div>
+    <ion-card class="m-4">
+        <ion-card-header class="p-0">
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button href="/plugins/inventory/" fill="clear">
+                        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
+                <ion-title>Configuración de Inventario</ion-title>
+            </ion-toolbar>
+        </ion-card-header>
 
-    <!-- Settings Form -->
-    <ion-card>
+        <!-- Settings Form -->
         <ion-card-content>
             <!-- Allow Negative Stock -->
             <div class="mb-6">
@@ -93,22 +94,17 @@
                     Restablecer a Valores Predeterminados
                 </ion-button>
             </div>
-        </ion-card-content>
-    </ion-card>
 
-    <!-- Info Card -->
-    <ion-card class="mt-4">
-        <ion-card-header>
-            <ion-card-title>
-                <ion-icon name="information-circle-outline" class="align-middle mr-2"></ion-icon>
-                Información
-            </ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-            <p class="text-sm" style="color: var(--ion-color-medium);">
-                Esta configuración se guarda localmente en el Hub y afecta al comportamiento
-                del plugin de inventario. Los cambios se aplican inmediatamente al activar o desactivar cada opción.
-            </p>
+            <!-- Info Section -->
+            <div class="mt-6 p-4 rounded-lg" style="background: var(--ion-color-step-50);">
+                <div class="flex items-start gap-2">
+                    <ion-icon name="information-circle-outline" style="font-size: 20px; color: var(--ion-color-primary); margin-top: 2px;"></ion-icon>
+                    <p class="text-sm" style="color: var(--ion-color-medium);">
+                        Esta configuración se guarda localmente en el Hub y afecta al comportamiento
+                        del plugin de inventario. Los cambios se aplican inmediatamente al activar o desactivar cada opción.
+                    </p>
+                </div>
+            </div>
         </ion-card-content>
     </ion-card>
 </div>

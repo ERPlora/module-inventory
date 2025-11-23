@@ -4,114 +4,65 @@
 
 {% block title %}Productos - CPOS Hub{% endblock %}
 
+{% block extra_head %}
+<!-- No external dependencies needed - barcode generated server-side -->
+{% endblock %}
+
 {% block content %}
 <div class="p-4">
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ion-card class="m-0">
-            <ion-card-content class="p-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="cube-outline" class="text-2xl text-primary"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-sm text-medium">Total Productos</div>
-                        <div class="text-2xl font-semibold">{{ total_products }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="checkmark-circle-outline" class="text-2xl text-success"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-sm text-medium">En Stock</div>
-                        <div class="text-2xl font-semibold">{{ products_in_stock }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="alert-circle-outline" class="text-2xl text-warning"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-sm text-medium">Stock Bajo</div>
-                        <div class="text-2xl font-semibold">{{ products_low_stock }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="cash-outline" class="text-2xl text-success"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-sm text-medium">Valor Total</div>
-                        <div class="text-2xl font-semibold">${{ total_inventory_value|floatformat:2 }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-    </div>
-
-    <!-- Products Table -->
-    <ion-card class="my-4">
-        <ion-card-header>
-            <div class="flex justify-between items-center flex-wrap gap-3">
-                <ion-card-title>{% trans "Listado de Productos" %}</ion-card-title>
-                <div class="flex gap-2 flex-wrap">
-                    <ion-button size="large" href="/plugins/inventory/products/create/">
-                        <ion-icon slot="start" name="add-outline"></ion-icon>
-                        {% trans "Nuevo Producto" %}
+    <ion-card class="m-4">
+        <ion-card-header class="p-0">
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button href="/plugins/inventory/" fill="clear">
+                        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
                     </ion-button>
-                    <ion-button size="large" fill="outline" href="/plugins/inventory/products/export/csv/">
-                        <ion-icon slot="start" name="download-outline"></ion-icon>
-                        CSV
-                    </ion-button>
-                    <ion-button size="large" fill="outline" href="/plugins/inventory/products/export/excel/">
-                        <ion-icon slot="start" name="document-outline"></ion-icon>
-                        Excel
-                    </ion-button>
-                </div>
-            </div>
+                </ion-buttons>
+                <ion-title>{% trans "Listado de Productos" %}</ion-title>
+            </ion-toolbar>
         </ion-card-header>
 
-        <!-- Search Bar -->
-        <div class="px-4 pb-4">
-            <div class="relative flex-1">
-                <ion-icon
-                    name="search-outline"
-                    class="absolute left-3 top-1/2 -translate-y-1/2"
-                    style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
-                </ion-icon>
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ request.GET.search|default:'' }}"
-                    placeholder="{% trans 'Buscar productos...' %}"
-                    class="w-full h-10 pl-10 pr-3 rounded-lg"
-                    style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
-                    hx-get="{{ request.path }}"
-                    hx-trigger="keyup changed delay:400ms"
-                    hx-target="#products-table-container"
-                    hx-include="[name='page'],[name='order_by'],[name='per_page']"
-                    hx-push-url="true">
-            </div>
-        </div>
+        <ion-card-content>
+            <!-- Search Bar and Action Buttons -->
+            <div class="flex flex-col md:flex-row gap-3 mb-4">
+                <!-- Search Bar -->
+                <div class="relative flex-1">
+                    <ion-icon
+                        name="search-outline"
+                        class="absolute left-3 top-1/2 -translate-y-1/2"
+                        style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
+                    </ion-icon>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search|default:'' }}"
+                        placeholder="{% trans 'Buscar productos...' %}"
+                        class="w-full h-10 pl-10 pr-3 rounded-lg"
+                        style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
+                        hx-get="{{ request.path }}"
+                        hx-trigger="keyup changed delay:400ms"
+                        hx-target="#products-table-container"
+                        hx-include="[name='page'],[name='order_by'],[name='per_page']"
+                        hx-push-url="true">
+                </div>
 
-        <!-- Table Container (HTMX updates this) -->
-        <div id="products-table-container">
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                    <ion-button size="default" fill="outline" onclick="document.getElementById('importFileInput').click()" title="{% trans 'Importar CSV/Excel' %}">
+                        <ion-icon slot="icon-only" name="cloud-upload-outline"></ion-icon>
+                    </ion-button>
+                    <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="handleFileImport(this)">
+                    <ion-button size="default" fill="outline" href="/plugins/inventory/products/export/csv/" title="{% trans 'Exportar a CSV' %}">
+                        <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button size="default" href="/plugins/inventory/products/create/" title="{% trans 'Nuevo Producto' %}">
+                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                    </ion-button>
+                </div>
+            </div>
+
+            <!-- Table Container (HTMX updates this) -->
+            <div id="products-table-container">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead style="background: var(--ion-color-step-50);">
@@ -204,10 +155,227 @@
                 </table>
             </div>
 
-            <ion-card-content>
+            <div class="px-4 py-2">
                 {% include "inventory/partials/products_pagination.html" %}
-            </ion-card-content>
-        </div>
+            </div>
+            </div>
+        </ion-card-content>
     </ion-card>
 </div>
+
+<script>
+async function confirmDeleteProduct(productId, productName, buttonElement) {
+    const alert = document.createElement('ion-alert');
+    alert.header = '{% trans "Confirmar Eliminación" %}';
+    alert.message = `{% trans "¿Estás seguro de que deseas eliminar el producto" %} "${productName}"?`;
+    alert.buttons = [
+        {
+            text: '{% trans "Cancelar" %}',
+            role: 'cancel',
+            cssClass: 'secondary'
+        },
+        {
+            text: '{% trans "Eliminar" %}',
+            role: 'confirm',
+            cssClass: 'danger',
+            handler: () => {
+                // Trigger HTMX delete request
+                const row = buttonElement.closest('tr');
+                fetch(`/plugins/inventory/products/${productId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Fade out and remove row
+                        row.style.transition = 'opacity 0.5s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 500);
+
+                        // Show success toast
+                        showToast('{% trans "Producto eliminado exitosamente" %}', 'success');
+                    } else {
+                        showToast('{% trans "Error al eliminar el producto" %}', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+                    showToast('{% trans "Error al eliminar el producto" %}', 'danger');
+                });
+            }
+        }
+    ];
+
+    document.body.appendChild(alert);
+    await alert.present();
+}
+
+async function showToast(message, color = 'primary') {
+    const toast = document.createElement('ion-toast');
+    toast.message = message;
+    toast.duration = 2000;
+    toast.color = color;
+    toast.position = 'top';
+    document.body.appendChild(toast);
+    await toast.present();
+}
+
+// Barcode print and download functions (barcode generated server-side with Python)
+function printBarcode(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Extract only the SVG (already contains the code text below)
+    const svg = container.querySelector('svg');
+
+    if (!svg) return;
+
+    const svgClone = svg.cloneNode(true);
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Código de Barras - Imprimir</title>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                svg {
+                    display: block;
+                    margin: 0 auto;
+                }
+                @media print {
+                    body {
+                        padding: 0;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${svgClone.outerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
+
+function downloadBarcode(containerId, sku) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+
+    // Convert SVG to canvas for PNG download
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const img = new Image();
+
+    img.onload = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+
+        const link = document.createElement('a');
+        link.download = `barcode-${sku}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+}
+
+async function handleFileImport(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Determine the import URL based on file extension
+    const fileName = file.name.toLowerCase();
+    let importUrl;
+    if (fileName.endsWith('.csv')) {
+        importUrl = '/plugins/inventory/products/import/csv/';
+    } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        importUrl = '/plugins/inventory/products/import/excel/';
+    } else {
+        await showToast('{% trans "Formato de archivo no válido. Use CSV o Excel" %}', 'danger');
+        input.value = '';
+        return;
+    }
+
+    // Show loading toast
+    const loadingToast = document.createElement('ion-toast');
+    loadingToast.message = '{% trans "Importando productos..." %}';
+    loadingToast.duration = 0; // Keep showing until we dismiss it
+    loadingToast.position = 'top';
+    document.body.appendChild(loadingToast);
+    await loadingToast.present();
+
+    try {
+        const response = await fetch(importUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            }
+        });
+
+        const result = await response.json();
+
+        // Dismiss loading toast
+        await loadingToast.dismiss();
+
+        if (response.ok) {
+            // Show success message
+            await showToast(`✓ ${result.message || '{% trans "Productos importados exitosamente" %}'}`, 'success');
+
+            // Reload the table
+            window.location.reload();
+        } else {
+            // Show error message
+            await showToast(`✗ ${result.error || '{% trans "Error al importar productos" %}'}`, 'danger');
+        }
+    } catch (error) {
+        await loadingToast.dismiss();
+        console.error('Import error:', error);
+        await showToast('{% trans "Error al importar productos" %}', 'danger');
+    }
+
+    // Reset file input
+    input.value = '';
+}
+
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) return csrfInput.value;
+
+    // Try to get from cookie if not in DOM
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+    }
+    return '';
+}
+</script>
 {% endblock %}

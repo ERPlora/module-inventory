@@ -51,39 +51,8 @@
     "label": "Inventory",
     "label_es": "Inventario",
     "icon": "cube-outline",
-    "order": 10,
-    "items": [
-      {
-        "label": "Dashboard",
-        "label_es": "Dashboard",
-        "url": "/plugins/inventory/",
-        "icon": "grid-outline"
-      },
-      {
-        "label": "Products",
-        "label_es": "Productos",
-        "url": "/plugins/inventory/products/",
-        "icon": "cube-outline"
-      },
-      {
-        "label": "Categories",
-        "label_es": "Categorías",
-        "url": "/plugins/inventory/categories/",
-        "icon": "albums-outline"
-      },
-      {
-        "label": "Reports",
-        "label_es": "Informes",
-        "url": "/plugins/inventory/reports/",
-        "icon": "stats-chart-outline"
-      },
-      {
-        "label": "Settings",
-        "label_es": "Configuración",
-        "url": "/plugins/inventory/settings/",
-        "icon": "settings-outline"
-      }
-    ]
+    "url": "/plugins/inventory/",
+    "order": 10
   },
   "settings": {
     "allow_negative_stock": {
