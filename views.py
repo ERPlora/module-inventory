@@ -11,12 +11,16 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
 from django.db import models, transaction
 from django.conf import settings
+from apps.configuration.models import HubConfig, StoreConfig
 from .models import Product, Category
 
 
 @login_required
 def dashboard(request):
     """Dashboard principal del inventario con estadísticas y resumen"""
+    # Obtener configuración global
+    currency = HubConfig.get_value('currency', 'EUR')
+
     # Estadísticas
     total_products = Product.objects.filter(is_active=True).count()
     products_in_stock = Product.objects.filter(is_active=True, stock__gt=0).count()
@@ -41,6 +45,7 @@ def dashboard(request):
         'products_in_stock': products_in_stock,
         'products_low_stock': products_low_stock,
         'total_inventory_value': total_inventory_value,
+        'currency': currency,
         'categories': categories,
         'low_stock_products': low_stock_products,
     }
