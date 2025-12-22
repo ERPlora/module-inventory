@@ -7,6 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from apps.accounts.decorators import login_required
+from apps.core.htmx import htmx_view
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
 from django.db import models, transaction
@@ -16,6 +17,7 @@ from .models import Product, Category
 
 
 @login_required
+@htmx_view('inventory/pages/index.html', 'inventory/partials/dashboard_content.html')
 def dashboard(request):
     """Dashboard principal del inventario con estadísticas y resumen"""
     # Obtener configuración global
@@ -40,7 +42,9 @@ def dashboard(request):
         stock__lte=F('low_stock_threshold')
     ).order_by('stock')[:10]
 
-    context = {
+    return {
+        'current_view': 'dashboard',
+        'current_section': 'inventory',
         'total_products': total_products,
         'products_in_stock': products_in_stock,
         'products_low_stock': products_low_stock,
@@ -50,10 +54,9 @@ def dashboard(request):
         'low_stock_products': low_stock_products,
     }
 
-    return render(request, 'inventory/index.html', context)
-
 
 @login_required
+@htmx_view('inventory/pages/products.html', 'inventory/partials/products_content.html')
 def products_list(request):
     """Lista de productos con DataTable"""
     from .models import ProductsConfig
@@ -90,17 +93,12 @@ def products_list(request):
 
     config = ProductsConfig.get_config()
 
-    context = {
+    return {
         'current_view': 'products',
+        'current_section': 'inventory',
         'page_obj': page_obj,
         'barcode_enabled': config.barcode_enabled,
     }
-
-    # Detectar si es una petición HTMX y devolver solo el partial
-    if request.headers.get('HX-Request'):
-        return render(request, 'inventory/partials/products_table_partial.html', context)
-
-    return render(request, 'inventory/products.html', context)
 
 
 @login_required
