@@ -7,16 +7,22 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from apps.accounts.decorators import login_required
+from apps.core.htmx import htmx_view
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
 from django.db import models, transaction
 from django.conf import settings
+from apps.configuration.models import HubConfig, StoreConfig
 from .models import Product, Category
 
 
 @login_required
+@htmx_view('inventory/pages/index.html', 'inventory/partials/dashboard_content.html')
 def dashboard(request):
     """Dashboard principal del inventario con estadísticas y resumen"""
+    # Obtener configuración global
+    currency = HubConfig.get_value('currency', 'EUR')
+
     # Estadísticas
     total_products = Product.objects.filter(is_active=True).count()
     products_in_stock = Product.objects.filter(is_active=True, stock__gt=0).count()
@@ -36,19 +42,21 @@ def dashboard(request):
         stock__lte=F('low_stock_threshold')
     ).order_by('stock')[:10]
 
-    context = {
+    return {
+        'current_view': 'dashboard',
+        'current_section': 'inventory',
         'total_products': total_products,
         'products_in_stock': products_in_stock,
         'products_low_stock': products_low_stock,
         'total_inventory_value': total_inventory_value,
+        'currency': currency,
         'categories': categories,
         'low_stock_products': low_stock_products,
     }
 
-    return render(request, 'inventory/index.html', context)
-
 
 @login_required
+@htmx_view('inventory/pages/products.html', 'inventory/partials/products_content.html')
 def products_list(request):
     """Lista de productos con DataTable"""
     from .models import ProductsConfig
@@ -85,17 +93,12 @@ def products_list(request):
 
     config = ProductsConfig.get_config()
 
-    context = {
+    return {
         'current_view': 'products',
+        'current_section': 'inventory',
         'page_obj': page_obj,
         'barcode_enabled': config.barcode_enabled,
     }
-
-    # Detectar si es una petición HTMX y devolver solo el partial
-    if request.headers.get('HX-Request'):
-        return render(request, 'inventory/partials/products_table_partial.html', context)
-
-    return render(request, 'inventory/products.html', context)
 
 
 @login_required
@@ -678,6 +681,7 @@ def categories_list(request):
 
 
 @login_required
+@htmx_view('inventory/pages/categories.html', 'inventory/partials/categories_content.html')
 def categories_index(request):
     """Vista principal de gestión de categorías con DataTable."""
     # Filtrar categorías
@@ -700,16 +704,12 @@ def categories_index(request):
     paginator = Paginator(queryset, per_page)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    context = {
+    return {
+        'current_view': 'categories',
+        'current_section': 'inventory',
         'page_obj': page_obj,
         'total_categories': Category.objects.filter(is_active=True).count()
     }
-
-    # Detectar si es una petición HTMX y devolver solo el partial
-    if request.headers.get('HX-Request'):
-        return render(request, 'inventory/partials/categories_table_partial.html', context)
-
-    return render(request, 'inventory/categories.html', context)
 
 
 @login_required
@@ -809,6 +809,7 @@ def category_delete(request, pk):
 
 
 @login_required
+@htmx_view('inventory/pages/reports.html', 'inventory/partials/reports_content.html')
 def reports_view(request):
     """Vista de informes/reportes del inventario"""
     # Estadísticas generales
@@ -880,7 +881,9 @@ def reports_view(request):
         stock__gt=0
     ).order_by('stock')[:20]
 
-    context = {
+    return {
+        'current_view': 'reports',
+        'current_section': 'inventory',
         'total_products': total_products,
         'products_in_stock': products_in_stock,
         'products_out_of_stock': products_out_of_stock,
@@ -894,8 +897,6 @@ def reports_view(request):
         'top_products_by_stock': top_products_by_stock,
         'critical_stock_products': critical_stock_products,
     }
-
-    return render(request, 'inventory/reports.html', context)
 
 
 @login_required
@@ -922,9 +923,15 @@ def settings_view(request):
             return JsonResponse({"success": False, "error": str(e)}, status=400)
 
     context = {
+        'current_view': 'settings',
+        'current_section': 'inventory',
         "config": config,
     }
-    return render(request, "inventory/settings.html", context)
+
+    # Use htmx pattern manually since POST needs special handling
+    if request.headers.get('HX-Request'):
+        return render(request, "inventory/partials/settings_content.html", context)
+    return render(request, "inventory/pages/settings.html", context)
 
 
 @login_required

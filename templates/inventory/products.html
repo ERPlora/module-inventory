@@ -223,7 +223,7 @@ async function showToast(message, color = 'primary') {
 }
 
 // Barcode print and download functions (barcode generated server-side with Python)
-function printBarcode(containerId) {
+async function printBarcode(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -234,44 +234,60 @@ function printBarcode(containerId) {
 
     const svgClone = svg.cloneNode(true);
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>Código de Barras - Imprimir</title>
-            <style>
-                body {
-                    margin: 0;
-                    padding: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    min-height: 100vh;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                }
-                svg {
-                    display: block;
-                    margin: 0 auto;
-                }
-                @media print {
+    // Check if running in pywebview (packaged app)
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.print_barcode) {
+        try {
+            const result = await window.pywebview.api.print_barcode(svgClone.outerHTML);
+            if (result.success) {
+                await showToast(result.message || '{% trans "Código de barras enviado a imprimir" %}', 'success');
+            } else {
+                await showToast(result.error || '{% trans "Error al imprimir código de barras" %}', 'danger');
+            }
+        } catch (error) {
+            console.error('Print error:', error);
+            await showToast('{% trans "Error al imprimir código de barras" %}', 'danger');
+        }
+    } else {
+        // Fallback for browser development
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Código de Barras - Imprimir</title>
+                <style>
                     body {
-                        padding: 0;
+                        margin: 0;
+                        padding: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                     }
-                }
-            </style>
-        </head>
-        <body>
-            ${svgClone.outerHTML}
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 250);
+                    svg {
+                        display: block;
+                        margin: 0 auto;
+                    }
+                    @media print {
+                        body {
+                            padding: 0;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                ${svgClone.outerHTML}
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
+    }
 }
 
 function downloadBarcode(containerId, sku) {

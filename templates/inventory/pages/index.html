@@ -1,0 +1,22 @@
+{% extends "dashboard/layout.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Inventory" %}{% endblock %}
+
+{# Section context for sidebar highlighting #}
+{% block content %}
+{% with current_section="inventory" section_title=_("Inventory") %}
+{{ block.super }}
+{% endwith %}
+{% endblock %}
+
+{% block section_tabbar %}
+<ion-footer>
+{% include "inventory/partials/tabbar.html" %}
+</ion-footer>
+{% endblock %}
+
+{% block dashboard_content %}
+{% include "inventory/partials/dashboard_content.html" %}
+{% endblock %}

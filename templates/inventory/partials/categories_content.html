@@ -1,0 +1,186 @@
+{% load static %}
+{% load i18n %}
+
+{% if request.htmx %}
+<!-- Tab bar update via OOB swap (only on HTMX navigation) -->
+<div id="dashboard-tabbar" hx-swap-oob="innerHTML">
+<ion-footer>
+{% include "inventory/partials/tabbar.html" %}
+</ion-footer>
+</div>
+{% endif %}
+
+<div class="ion-padding">
+    <ion-card class="m-0">
+        <ion-card-header>
+            <ion-card-title>{% trans "Categories" %}</ion-card-title>
+        </ion-card-header>
+
+        <ion-card-content>
+            <!-- Search Bar and Action Buttons -->
+            <div class="flex flex-col md:flex-row gap-3 mb-4">
+                <!-- Search Bar -->
+                <div class="relative flex-1">
+                    <ion-icon
+                        name="search-outline"
+                        class="absolute left-3 top-1/2 -translate-y-1/2"
+                        style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
+                    </ion-icon>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search|default:'' }}"
+                        placeholder="{% trans 'Search categories...' %}"
+                        class="w-full h-10 pl-10 pr-3 rounded-lg"
+                        style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
+                        hx-get="{% url 'inventory:categories_index' %}"
+                        hx-trigger="keyup changed delay:400ms"
+                        hx-target="#categories-table-container"
+                        hx-include="[name='page'],[name='order_by'],[name='per_page']"
+                        hx-push-url="true">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                    <ion-button size="default" fill="outline" onclick="document.getElementById('importCategoryFileInput').click()" title="{% trans 'Import CSV/Excel' %}">
+                        <ion-icon slot="icon-only" name="cloud-upload-outline"></ion-icon>
+                    </ion-button>
+                    <input type="file" id="importCategoryFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="handleCategoryFileImport(this)">
+                    <ion-button size="default" fill="outline" href="{% url 'inventory:export_categories_csv' %}" title="{% trans 'Export to CSV' %}">
+                        <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button size="default" href="{% url 'inventory:category_create' %}" title="{% trans 'New Category' %}">
+                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                    </ion-button>
+                </div>
+            </div>
+
+            <!-- Table Container (HTMX updates this) -->
+            <div id="categories-table-container">
+                {% include "inventory/partials/categories_table_partial.html" %}
+            </div>
+        </ion-card-content>
+    </ion-card>
+</div>
+
+<script>
+async function confirmDeleteCategory(categoryId, categoryName, buttonElement) {
+    const alert = document.createElement('ion-alert');
+    alert.header = '{% trans "Confirm Delete" %}';
+    alert.message = `{% trans "Are you sure you want to delete category" %} "${categoryName}"?`;
+    alert.buttons = [
+        {
+            text: '{% trans "Cancel" %}',
+            role: 'cancel',
+            cssClass: 'secondary'
+        },
+        {
+            text: '{% trans "Delete" %}',
+            role: 'confirm',
+            cssClass: 'danger',
+            handler: () => {
+                const row = buttonElement.closest('tr');
+                fetch(`/modules/inventory/categories/delete/${categoryId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCsrfToken(),
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        row.style.transition = 'opacity 0.5s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 500);
+                        showToast('{% trans "Category deleted successfully" %}', 'success');
+                    } else {
+                        showToast(data.message || '{% trans "Error deleting category" %}', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+                    showToast('{% trans "Error deleting category" %}', 'danger');
+                });
+            }
+        }
+    ];
+
+    document.body.appendChild(alert);
+    await alert.present();
+}
+
+async function showToast(message, color = 'primary') {
+    const toast = document.createElement('ion-toast');
+    toast.message = message;
+    toast.duration = 2000;
+    toast.color = color;
+    toast.position = 'top';
+    document.body.appendChild(toast);
+    await toast.present();
+}
+
+async function handleCategoryFileImport(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const fileName = file.name.toLowerCase();
+    let importUrl;
+    if (fileName.endsWith('.csv')) {
+        importUrl = '/modules/inventory/categories/import/csv/';
+    } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        importUrl = '/modules/inventory/categories/import/excel/';
+    } else {
+        await showToast('{% trans "Invalid file format. Use CSV or Excel" %}', 'danger');
+        input.value = '';
+        return;
+    }
+
+    const loadingToast = document.createElement('ion-toast');
+    loadingToast.message = '{% trans "Importing categories..." %}';
+    loadingToast.duration = 0;
+    loadingToast.position = 'top';
+    document.body.appendChild(loadingToast);
+    await loadingToast.present();
+
+    try {
+        const response = await fetch(importUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            }
+        });
+
+        const result = await response.json();
+        await loadingToast.dismiss();
+
+        if (response.ok) {
+            await showToast(result.message || '{% trans "Categories imported successfully" %}', 'success');
+            window.location.reload();
+        } else {
+            await showToast(result.error || '{% trans "Error importing categories" %}', 'danger');
+        }
+    } catch (error) {
+        await loadingToast.dismiss();
+        console.error('Import error:', error);
+        await showToast('{% trans "Error importing categories" %}', 'danger');
+    }
+
+    input.value = '';
+}
+
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) return csrfInput.value;
+
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+    }
+    return '';
+}
+</script>
