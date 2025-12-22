@@ -33,7 +33,7 @@
                         placeholder="{% trans 'Search products...' %}"
                         class="w-full h-10 pl-10 pr-3 rounded-lg"
                         style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
-                        hx-get="{% url 'inventory:products' %}"
+                        hx-get="{% url 'inventory:products_list' %}"
                         hx-trigger="keyup changed delay:400ms"
                         hx-target="#products-table-container"
                         hx-include="[name='page'],[name='order_by'],[name='per_page']"

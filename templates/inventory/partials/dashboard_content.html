@@ -126,7 +126,7 @@
                     {% trans "Low Stock Products" %}
                 </ion-card-title>
                 <ion-button size="small" fill="clear"
-                    hx-get="{% url 'inventory:products' %}?low_stock=1"
+                    hx-get="{% url 'inventory:products_list' %}?low_stock=1"
                     hx-target="#dashboard-content"
                     hx-push-url="true">
                     {% trans "View all" %}
