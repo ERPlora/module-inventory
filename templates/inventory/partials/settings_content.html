@@ -1,0 +1,216 @@
+{% load static %}
+{% load i18n %}
+
+{% if request.htmx %}
+<!-- Tab bar update via OOB swap (only on HTMX navigation) -->
+<div id="dashboard-tabbar" hx-swap-oob="innerHTML">
+<ion-footer>
+{% include "inventory/partials/tabbar.html" %}
+</ion-footer>
+</div>
+{% endif %}
+
+{% csrf_token %}
+<div x-data="settingsApp()" x-init="init()" class="ion-padding">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold" style="color: var(--ion-text-color);">{% trans "Inventory Settings" %}</h1>
+        <p class="text-sm mt-1" style="color: var(--ion-color-medium);">{% trans "Configure inventory module behavior" %}</p>
+    </div>
+
+    <ion-card class="m-0">
+        <ion-card-content>
+            <!-- Allow Negative Stock -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h3 class="font-semibold mb-1" style="color: var(--ion-text-color);">
+                            {% trans "Allow Negative Stock" %}
+                        </h3>
+                        <p class="text-sm" style="color: var(--ion-color-medium);">
+                            {% trans "Allow products to have negative stock values" %}
+                        </p>
+                    </div>
+                    <ion-toggle
+                        x-ref="toggle_allow_negative_stock"
+                        :checked="settings.allow_negative_stock"
+                        :color="settings.allow_negative_stock ? 'success' : 'warning'">
+                    </ion-toggle>
+                </div>
+            </div>
+
+            <div style="height: 1px; background: var(--ion-border-color); margin: 1.5rem 0;"></div>
+
+            <!-- Low Stock Alerts -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h3 class="font-semibold mb-1" style="color: var(--ion-text-color);">
+                            {% trans "Low Stock Alerts" %}
+                        </h3>
+                        <p class="text-sm" style="color: var(--ion-color-medium);">
+                            {% trans "Send alerts when products reach low stock threshold" %}
+                        </p>
+                    </div>
+                    <ion-toggle
+                        x-ref="toggle_low_stock_alert_enabled"
+                        :checked="settings.low_stock_alert_enabled"
+                        :color="settings.low_stock_alert_enabled ? 'success' : 'warning'">
+                    </ion-toggle>
+                </div>
+            </div>
+
+            <div style="height: 1px; background: var(--ion-border-color); margin: 1.5rem 0;"></div>
+
+            <!-- Barcode Generation -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h3 class="font-semibold mb-1" style="color: var(--ion-text-color);">
+                            {% trans "Barcode Generation" %}
+                        </h3>
+                        <p class="text-sm" style="color: var(--ion-color-medium);">
+                            {% trans "Enable barcode generation and display for products" %}
+                        </p>
+                    </div>
+                    <ion-toggle
+                        x-ref="toggle_barcode_enabled"
+                        :checked="settings.barcode_enabled"
+                        :color="settings.barcode_enabled ? 'success' : 'warning'">
+                    </ion-toggle>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="mt-6">
+                <ion-button
+                    color="medium"
+                    fill="outline"
+                    expand="block"
+                    @click="resetToDefaults()">
+                    <ion-icon slot="start" name="refresh-outline"></ion-icon>
+                    {% trans "Reset to Defaults" %}
+                </ion-button>
+            </div>
+
+            <!-- Info Section -->
+            <div class="mt-6 p-4 rounded-lg" style="background: var(--ion-color-step-50);">
+                <div class="flex items-start gap-2">
+                    <ion-icon name="information-circle-outline" style="font-size: 20px; color: var(--ion-color-primary); margin-top: 2px;"></ion-icon>
+                    <p class="text-sm" style="color: var(--ion-color-medium);">
+                        {% trans "This configuration is saved locally in the Hub and affects the inventory module behavior. Changes are applied immediately when enabling or disabling each option." %}
+                    </p>
+                </div>
+            </div>
+        </ion-card-content>
+    </ion-card>
+</div>
+
+<script>
+function settingsApp() {
+    return {
+        settings: {
+            allow_negative_stock: {{ config.allow_negative_stock|yesno:"true,false" }},
+            low_stock_alert_enabled: {{ config.low_stock_alert_enabled|yesno:"true,false" }},
+            barcode_enabled: {{ config.barcode_enabled|yesno:"true,false" }}
+        },
+
+        init() {
+            console.log('[Inventory Settings] Initialized', this.settings);
+
+            this.$nextTick(() => {
+                const toggleAllowNegative = this.$refs.toggle_allow_negative_stock;
+                if (toggleAllowNegative) {
+                    toggleAllowNegative.addEventListener('ionChange', (e) => {
+                        console.log('[Inventory Settings] Allow Negative Stock changed to:', e.detail.checked);
+                        this.updateSetting('allow_negative_stock', e.detail.checked);
+                    });
+                }
+
+                const toggleLowStock = this.$refs.toggle_low_stock_alert_enabled;
+                if (toggleLowStock) {
+                    toggleLowStock.addEventListener('ionChange', (e) => {
+                        console.log('[Inventory Settings] Low Stock Alert changed to:', e.detail.checked);
+                        this.updateSetting('low_stock_alert_enabled', e.detail.checked);
+                    });
+                }
+
+                const toggleBarcode = this.$refs.toggle_barcode_enabled;
+                if (toggleBarcode) {
+                    toggleBarcode.addEventListener('ionChange', (e) => {
+                        console.log('[Inventory Settings] Barcode enabled changed to:', e.detail.checked);
+                        this.updateSetting('barcode_enabled', e.detail.checked);
+                    });
+                }
+            });
+        },
+
+        async updateSetting(key, value) {
+            console.log('[Inventory Settings] Updating', key, '=', value);
+
+            this.settings[key] = value;
+
+            try {
+                const response = await fetch('{% url "inventory:settings" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(this.settings)
+                });
+
+                if (response.ok) {
+                    console.log('[Inventory Settings] Saved successfully');
+                    this.showToast('{% trans "Settings saved" %}', 'success');
+                } else {
+                    throw new Error('{% trans "Error saving settings" %}');
+                }
+            } catch (error) {
+                console.error('[Inventory Settings] Error:', error);
+                this.showToast('{% trans "Error saving settings" %}', 'danger');
+                this.settings[key] = !value;
+            }
+        },
+
+        async resetToDefaults() {
+            this.settings = {
+                allow_negative_stock: false,
+                low_stock_alert_enabled: true,
+                barcode_enabled: true
+            };
+
+            try {
+                const response = await fetch('{% url "inventory:settings" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(this.settings)
+                });
+
+                if (response.ok) {
+                    this.showToast('{% trans "Settings reset to defaults" %}', 'warning');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    throw new Error('{% trans "Error resetting settings" %}');
+                }
+            } catch (error) {
+                console.error('[Inventory Settings] Error:', error);
+                this.showToast('{% trans "Error resetting settings" %}', 'danger');
+            }
+        },
+
+        async showToast(message, color = 'primary') {
+            const toast = document.createElement('ion-toast');
+            toast.message = message;
+            toast.duration = 2000;
+            toast.color = color;
+            toast.position = 'top';
+            document.body.appendChild(toast);
+            await toast.present();
+        }
+    }
+}
+</script>

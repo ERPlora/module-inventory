@@ -681,6 +681,7 @@ def categories_list(request):
 
 
 @login_required
+@htmx_view('inventory/pages/categories.html', 'inventory/partials/categories_content.html')
 def categories_index(request):
     """Vista principal de gestión de categorías con DataTable."""
     # Filtrar categorías
@@ -703,16 +704,12 @@ def categories_index(request):
     paginator = Paginator(queryset, per_page)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    context = {
+    return {
+        'current_view': 'categories',
+        'current_section': 'inventory',
         'page_obj': page_obj,
         'total_categories': Category.objects.filter(is_active=True).count()
     }
-
-    # Detectar si es una petición HTMX y devolver solo el partial
-    if request.headers.get('HX-Request'):
-        return render(request, 'inventory/partials/categories_table_partial.html', context)
-
-    return render(request, 'inventory/categories.html', context)
 
 
 @login_required
@@ -812,6 +809,7 @@ def category_delete(request, pk):
 
 
 @login_required
+@htmx_view('inventory/pages/reports.html', 'inventory/partials/reports_content.html')
 def reports_view(request):
     """Vista de informes/reportes del inventario"""
     # Estadísticas generales
@@ -883,7 +881,9 @@ def reports_view(request):
         stock__gt=0
     ).order_by('stock')[:20]
 
-    context = {
+    return {
+        'current_view': 'reports',
+        'current_section': 'inventory',
         'total_products': total_products,
         'products_in_stock': products_in_stock,
         'products_out_of_stock': products_out_of_stock,
@@ -897,8 +897,6 @@ def reports_view(request):
         'top_products_by_stock': top_products_by_stock,
         'critical_stock_products': critical_stock_products,
     }
-
-    return render(request, 'inventory/reports.html', context)
 
 
 @login_required
@@ -925,9 +923,15 @@ def settings_view(request):
             return JsonResponse({"success": False, "error": str(e)}, status=400)
 
     context = {
+        'current_view': 'settings',
+        'current_section': 'inventory',
         "config": config,
     }
-    return render(request, "inventory/settings.html", context)
+
+    # Use htmx pattern manually since POST needs special handling
+    if request.headers.get('HX-Request'):
+        return render(request, "inventory/partials/settings_content.html", context)
+    return render(request, "inventory/pages/settings.html", context)
 
 
 @login_required
