@@ -82,6 +82,16 @@ class Category(models.Model):
         verbose_name="Orden",
         help_text="Orden de visualización (menor número = primero)"
     )
+    # Tax Class - default tax for products in this category
+    tax_class = models.ForeignKey(
+        'configuration.TaxClass',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='categories',
+        verbose_name="Tax Class",
+        help_text="Default tax class for products in this category"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Activa")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
@@ -135,6 +145,10 @@ class Product(models.Model):
     """
     Modelo de Producto
     """
+    class ProductType(models.TextChoices):
+        PHYSICAL = 'physical', 'Physical Product'
+        SERVICE = 'service', 'Service'
+
     name = models.CharField(max_length=255, verbose_name="Nombre")
     sku = models.CharField(max_length=100, unique=True, verbose_name="SKU")
     ean13 = models.CharField(
@@ -146,6 +160,16 @@ class Product(models.Model):
         help_text="Código de barras EAN-13 (13 dígitos)"
     )
     description = models.TextField(blank=True, verbose_name="Descripción")
+
+    # Product Type (physical or service)
+    product_type = models.CharField(
+        max_length=20,
+        choices=ProductType.choices,
+        default=ProductType.PHYSICAL,
+        verbose_name="Product Type",
+        help_text="Physical products affect stock, services do not"
+    )
+
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -176,6 +200,18 @@ class Product(models.Model):
         verbose_name="Categorías",
         help_text="Categorías del producto (puede pertenecer a múltiples)"
     )
+
+    # Tax Class Override (optional, inherits from category if not set)
+    tax_class = models.ForeignKey(
+        'configuration.TaxClass',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name="Tax Class Override",
+        help_text="Override the category's tax class (optional)"
+    )
+
     image = models.ImageField(
         upload_to='products/images/',
         blank=True,
@@ -211,6 +247,49 @@ class Product(models.Model):
         if self.cost > 0:
             return ((self.price - self.cost) / self.cost) * 100
         return 0
+
+    @property
+    def is_service(self):
+        """Returns True if this is a service (doesn't affect stock)"""
+        return self.product_type == self.ProductType.SERVICE
+
+    def get_effective_tax_class(self):
+        """
+        Get the effective tax class for this product.
+        Inheritance order: Product → Category → StoreConfig.default_tax_class
+
+        Returns:
+            TaxClass instance or None
+        """
+        # 1. Product's own tax_class (override)
+        if self.tax_class:
+            return self.tax_class
+
+        # 2. First category with tax_class
+        for category in self.categories.all():
+            if category.tax_class:
+                return category.tax_class
+
+        # 3. StoreConfig default_tax_class
+        from apps.configuration.models import StoreConfig
+        store_config = StoreConfig.get_solo()
+        return store_config.default_tax_class
+
+    def get_tax_rate(self):
+        """
+        Get the effective tax rate for this product.
+
+        Returns:
+            Decimal: Tax rate as percentage (e.g., 21.00 for 21%)
+        """
+        tax_class = self.get_effective_tax_class()
+        if tax_class:
+            return tax_class.rate
+
+        # Fallback to legacy StoreConfig.tax_rate
+        from apps.configuration.models import StoreConfig
+        store_config = StoreConfig.get_solo()
+        return store_config.tax_rate
 
     def get_image_path(self):
         """Retorna la ruta relativa de la imagen"""

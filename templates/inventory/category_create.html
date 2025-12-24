@@ -2,7 +2,7 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans "Editar Categoría" %} - CPOS Hub{% endblock %}
+{% block title %}{% trans "Crear Categoría" %} - CPOS Hub{% endblock %}
 
 {% block content %}
 <div class="p-4">
@@ -14,7 +14,7 @@
                         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
                     </ion-button>
                 </ion-buttons>
-                <ion-title>{% trans "Editar Categoría" %}</ion-title>
+                <ion-title>{% trans "Crear Categoría" %}</ion-title>
             </ion-toolbar>
         </ion-card-header>
 
@@ -28,7 +28,6 @@
                         label="{% trans 'Nombre' %} *"
                         label-placement="floating"
                         name="name"
-                        value="{{ category.name }}"
                         placeholder="{% trans 'Ingrese el nombre de la categoría' %}"
                         required>
                     </ion-input>
@@ -41,7 +40,7 @@
                         label-placement="floating"
                         name="description"
                         placeholder="{% trans 'Ingrese la descripción de la categoría' %}"
-                        rows="3">{{ category.description }}</ion-textarea>
+                        rows="3"></ion-textarea>
                 </ion-item>
 
                 <!-- Icono -->
@@ -50,7 +49,7 @@
                         label="{% trans 'Icono' %}"
                         label-placement="floating"
                         name="icon"
-                        value="{{ category.icon }}"
+                        value="cube-outline"
                         placeholder="cube-outline">
                     </ion-input>
                 </ion-item>
@@ -61,7 +60,7 @@
                     <input
                         type="color"
                         name="color"
-                        value="{{ category.color }}"
+                        value="#3880ff"
                         style="width: 100%; height: 40px; border: none; cursor: pointer;">
                 </ion-item>
 
@@ -71,7 +70,6 @@
                         name="tax_class_id"
                         label="{% trans 'Tax Class' %}"
                         label-placement="floating"
-                        value="{% if category.tax_class %}{{ category.tax_class.id }}{% endif %}"
                         placeholder="{% trans 'Select tax class' %}">
                         <ion-select-option value="">{% trans "No Tax Class" %}</ion-select-option>
                         {% for tc in tax_classes %}
@@ -87,7 +85,7 @@
                         label-placement="floating"
                         name="order"
                         type="number"
-                        value="{{ category.order }}"
+                        value="0"
                         placeholder="0">
                     </ion-input>
                 </ion-item>
@@ -124,15 +122,6 @@
                         const dropzoneLabel = document.getElementById('dropzoneLabel');
                         const removeBtn = document.getElementById('removeImageBtn');
 
-                        // Show existing image if editing
-                        {% if category.image %}
-                        if (previewDiv && previewImg) {
-                            previewImg.src = '{{ category.image.url }}';
-                            previewDiv.style.display = 'block';
-                            dropzoneLabel.style.display = 'none';
-                        }
-                        {% endif %}
-
                         // Preview on file select
                         if (fileInput && previewDiv && previewImg) {
                             fileInput.addEventListener('change', function(e) {
@@ -165,7 +154,7 @@
                 <div class="mt-6 flex gap-2">
                     <ion-button type="submit" expand="block" color="primary">
                         <ion-icon slot="start" name="save-outline"></ion-icon>
-                        {% trans "Guardar Cambios" %}
+                        {% trans "Crear Categoría" %}
                     </ion-button>
                     <ion-button type="button" expand="block" fill="outline" href="/modules/inventory/categories/">
                         {% trans "Cancelar" %}
@@ -210,7 +199,7 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
         } else {
             // Show error toast
             const toast = document.createElement('ion-toast');
-            toast.message = data.message || '{% trans "Error al guardar" %}';
+            toast.message = data.message || '{% trans "Error al crear" %}';
             toast.duration = 3000;
             toast.color = 'danger';
             toast.position = 'top';

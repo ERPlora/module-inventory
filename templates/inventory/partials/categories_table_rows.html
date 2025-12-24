@@ -47,7 +47,7 @@
         <!-- Actions -->
         <td class="px-4 py-3">
             <div class="flex gap-1 justify-center">
-                <ion-button size="large" fill="clear" href="/plugins/inventory/categories/edit/{{ category.id }}/" title="{% trans 'Editar' %}">
+                <ion-button size="large" fill="clear" href="{% url 'inventory:category_edit' pk=category.id %}" title="{% trans 'Editar' %}">
                     <ion-icon slot="icon-only" name="create-outline"></ion-icon>
                 </ion-button>
                 <ion-button size="large" fill="clear" color="danger"
