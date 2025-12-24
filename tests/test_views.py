@@ -1,30 +1,37 @@
-"""Tests for Products views."""
+"""Tests for Inventory views."""
 
 import pytest
 from decimal import Decimal
 from django.test import Client
 from django.urls import reverse
-from django.contrib.auth import get_user_model
-from products.models import Product, Category
-
-
-User = get_user_model()
+from apps.accounts.models import LocalUser
+from inventory.models import Product, Category
 
 
 @pytest.fixture
 def user(db):
     """Create test user."""
-    return User.objects.create_user(
+    user = LocalUser.objects.create(
         email='test@example.com',
-        password='testpass123'
+        name='Test User',
+        role='admin',
+        pin_hash='',
+        is_active=True
     )
+    user.set_pin('1234')
+    return user
 
 
 @pytest.fixture
 def authenticated_client(user):
     """Create authenticated client."""
     client = Client()
-    client.force_login(user)
+    session = client.session
+    session['local_user_id'] = str(user.id)
+    session['user_name'] = user.name
+    session['user_email'] = user.email
+    session['user_role'] = user.role
+    session.save()
     return client
 
 
@@ -58,20 +65,20 @@ class TestProductViews:
     def test_index_requires_login(self):
         """Test index view requires authentication."""
         client = Client()
-        response = client.get(reverse('products:index'))
+        response = client.get(reverse('inventory:index'))
 
         assert response.status_code == 302  # Redirect to login
 
     def test_index_authenticated(self, authenticated_client):
         """Test index view with authentication."""
-        response = authenticated_client.get(reverse('products:index'))
+        response = authenticated_client.get(reverse('inventory:index'))
 
         assert response.status_code == 200
         assert 'total_products' in response.context
 
     def test_product_list_ajax(self, authenticated_client, product):
         """Test product list AJAX endpoint."""
-        response = authenticated_client.get(reverse('products:product_list_ajax'))
+        response = authenticated_client.get(reverse('inventory:product_list_ajax'))
 
         assert response.status_code == 200
         data = response.json()
@@ -80,7 +87,7 @@ class TestProductViews:
 
     def test_product_create_get(self, authenticated_client):
         """Test GET product create view."""
-        response = authenticated_client.get(reverse('products:product_create'))
+        response = authenticated_client.get(reverse('inventory:product_create'))
 
         assert response.status_code == 200
 
@@ -95,7 +102,7 @@ class TestProductViews:
             'category_id': category.id
         }
 
-        response = authenticated_client.post(reverse('products:product_create'), data)
+        response = authenticated_client.post(reverse('inventory:product_create'), data)
 
         assert response.status_code == 200
         assert Product.objects.filter(sku='NEW-001').exists()
@@ -112,7 +119,7 @@ class TestProductViews:
         }
 
         response = authenticated_client.post(
-            reverse('products:product_edit', args=[product.pk]),
+            reverse('inventory:product_edit', args=[product.pk]),
             data
         )
 
@@ -126,7 +133,7 @@ class TestProductViews:
         product_id = product.pk
 
         response = authenticated_client.post(
-            reverse('products:product_delete', args=[product_id])
+            reverse('inventory:product_delete', args=[product_id])
         )
 
         assert response.status_code == 200
@@ -134,7 +141,7 @@ class TestProductViews:
 
     def test_export_csv(self, authenticated_client, product):
         """Test CSV export."""
-        response = authenticated_client.get(reverse('products:export_csv'))
+        response = authenticated_client.get(reverse('inventory:export_csv'))
 
         assert response.status_code == 200
         assert response['Content-Type'] == 'text/csv; charset=utf-8'
@@ -147,7 +154,7 @@ class TestCategoryViews:
 
     def test_categories_index(self, authenticated_client, category):
         """Test categories index view."""
-        response = authenticated_client.get(reverse('products:categories_index'))
+        response = authenticated_client.get(reverse('inventory:categories_index'))
 
         assert response.status_code == 200
         assert 'categories' in response.context
@@ -163,7 +170,7 @@ class TestCategoryViews:
         }
 
         response = authenticated_client.post(
-            reverse('products:category_create'),
+            reverse('inventory:category_create'),
             data
         )
 
@@ -180,7 +187,7 @@ class TestCategoryViews:
         }
 
         response = authenticated_client.post(
-            reverse('products:category_edit', args=[category.pk]),
+            reverse('inventory:category_edit', args=[category.pk]),
             data
         )
 
@@ -191,7 +198,7 @@ class TestCategoryViews:
     def test_category_delete_with_products(self, authenticated_client, category, product):
         """Test cannot delete category with products."""
         response = authenticated_client.post(
-            reverse('products:category_delete', args=[category.pk])
+            reverse('inventory:category_delete', args=[category.pk])
         )
 
         data = response.json()
@@ -201,7 +208,7 @@ class TestCategoryViews:
     def test_category_delete_empty(self, authenticated_client, category):
         """Test delete category without products."""
         response = authenticated_client.post(
-            reverse('products:category_delete', args=[category.pk])
+            reverse('inventory:category_delete', args=[category.pk])
         )
 
         assert response.status_code == 200
@@ -209,7 +216,7 @@ class TestCategoryViews:
 
     def test_categories_list_api(self, authenticated_client, category):
         """Test categories list API."""
-        response = authenticated_client.get(reverse('products:categories_list'))
+        response = authenticated_client.get(reverse('inventory:categories_list'))
 
         assert response.status_code == 200
         data = response.json()

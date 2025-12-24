@@ -1,8 +1,8 @@
-"""Tests for Products models."""
+"""Tests for Inventory models."""
 
 import pytest
 from decimal import Decimal
-from products.models import Product, Category
+from inventory.models import Product, Category
 
 
 @pytest.mark.django_db
