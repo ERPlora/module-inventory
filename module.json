@@ -9,6 +9,7 @@
   "author_email": "support@erplora.com",
   "license": "MIT",
   "category": "inventory",
+  "tags": ["inventory", "stock", "products", "warehouse", "catalog", "import", "export"],
   "icon": "cube-outline",
   "homepage": "https://github.com/ERPlora/module-inventory",
   "repository_url": "https://github.com/ERPlora/module-inventory",

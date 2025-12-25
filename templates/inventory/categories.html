@@ -10,7 +10,7 @@
         <ion-card-header class="p-0">
             <ion-toolbar>
                 <ion-buttons slot="start">
-                    <ion-button href="/plugins/inventory/" fill="clear">
+                    <ion-button href="/modules/inventory/" fill="clear">
                         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
                     </ion-button>
                 </ion-buttons>
@@ -48,10 +48,10 @@
                         <ion-icon slot="icon-only" name="cloud-upload-outline"></ion-icon>
                     </ion-button>
                     <input type="file" id="importCategoryFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="handleCategoryFileImport(this)">
-                    <ion-button size="default" fill="outline" href="/plugins/inventory/categories/export/csv/" title="{% trans 'Exportar a CSV' %}">
+                    <ion-button size="default" fill="outline" href="/modules/inventory/categories/export/csv/" title="{% trans 'Exportar a CSV' %}">
                         <ion-icon slot="icon-only" name="download-outline"></ion-icon>
                     </ion-button>
-                    <ion-button size="default" href="/plugins/inventory/categories/create/" title="{% trans 'Nueva Categoría' %}">
+                    <ion-button size="default" href="/modules/inventory/categories/create/" title="{% trans 'Nueva Categoría' %}">
                         <ion-icon slot="icon-only" name="add-outline"></ion-icon>
                     </ion-button>
                 </div>
@@ -152,7 +152,7 @@ async function confirmDeleteCategory(categoryId, categoryName, buttonElement) {
             cssClass: 'danger',
             handler: () => {
                 const row = buttonElement.closest('tr');
-                fetch(`/plugins/inventory/categories/delete/${categoryId}/`, {
+                fetch(`/modules/inventory/categories/delete/${categoryId}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -204,9 +204,9 @@ async function handleCategoryFileImport(input) {
     const fileName = file.name.toLowerCase();
     let importUrl;
     if (fileName.endsWith('.csv')) {
-        importUrl = '/plugins/inventory/categories/import/csv/';
+        importUrl = '/modules/inventory/categories/import/csv/';
     } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        importUrl = '/plugins/inventory/categories/import/excel/';
+        importUrl = '/modules/inventory/categories/import/excel/';
     } else {
         await showToast('{% trans "Formato de archivo no válido. Use CSV o Excel" %}', 'danger');
         input.value = '';

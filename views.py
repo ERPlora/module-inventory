@@ -12,7 +12,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
 from django.db import models, transaction
 from django.conf import settings
-from apps.configuration.models import HubConfig, StoreConfig
+from apps.configuration.models import HubConfig, StoreConfig, TaxClass
 from .models import Product, Category
 
 
@@ -181,15 +181,22 @@ def product_create(request):
             threshold_str = request.POST.get('low_stock_threshold', '10').strip()
             low_stock_threshold = int(threshold_str) if threshold_str else 10
 
+            # Get product_type and tax_class
+            product_type = request.POST.get('product_type', 'physical')
+            tax_class_id = request.POST.get('tax_class_id', '').strip()
+            tax_class = TaxClass.objects.get(id=tax_class_id) if tax_class_id else None
+
             # Create product first
             product = Product.objects.create(
                 name=request.POST['name'],
                 sku=request.POST['sku'],
                 description=request.POST.get('description', ''),
+                product_type=product_type,
                 price=price,
                 cost=cost,
                 stock=stock,
                 low_stock_threshold=low_stock_threshold,
+                tax_class=tax_class,
                 image=image
             )
 
@@ -210,8 +217,10 @@ def product_create(request):
         except Exception as e:
             # Show error message and return to form
             categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+            tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
             context = {
                 'categories': categories,
+                'tax_classes': tax_classes,
                 'mode': 'create',
                 'readonly': False,
                 'error_message': str(e)
@@ -220,8 +229,10 @@ def product_create(request):
 
     # GET request - show create form
     categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+    tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
     context = {
         'categories': categories,
+        'tax_classes': tax_classes,
         'mode': 'create',
         'readonly': False,
     }
@@ -255,10 +266,15 @@ def product_edit(request, pk):
             product.name = request.POST['name']
             product.sku = request.POST['sku']
             product.description = request.POST.get('description', '')
+            product.product_type = request.POST.get('product_type', 'physical')
             product.price = Decimal(price_str)
             product.cost = Decimal(cost_str) if cost_str else Decimal('0')
             product.stock = int(stock_str) if stock_str else 0
             product.low_stock_threshold = int(threshold_str) if threshold_str else 10
+
+            # Update tax_class
+            tax_class_id = request.POST.get('tax_class_id', '').strip()
+            product.tax_class = TaxClass.objects.get(id=tax_class_id) if tax_class_id else None
 
             # Actualizar imagen si se proporciona
             if 'image' in request.FILES:
@@ -288,9 +304,11 @@ def product_edit(request, pk):
         except Exception as e:
             # Show error message and return to form
             categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+            tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
             context = {
                 'product': product,
                 'categories': categories,
+                'tax_classes': tax_classes,
                 'mode': 'edit',
                 'readonly': False,
                 'error_message': str(e)
@@ -299,9 +317,11 @@ def product_edit(request, pk):
 
     # GET request - show edit form
     categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+    tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
     context = {
         'product': product,
         'categories': categories,
+        'tax_classes': tax_classes,
         'mode': 'edit',
         'readonly': False,
     }
@@ -316,10 +336,12 @@ def product_view(request, pk):
     """
     product = get_object_or_404(Product, pk=pk)
     categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+    tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
 
     context = {
         'product': product,
         'categories': categories,
+        'tax_classes': tax_classes,
         'mode': 'view',
         'readonly': True,
     }
@@ -720,13 +742,20 @@ def category_create(request):
         try:
             image = request.FILES.get('image')
 
+            # Handle tax_class
+            tax_class = None
+            tax_class_id = request.POST.get('tax_class_id', '').strip()
+            if tax_class_id:
+                tax_class = TaxClass.objects.filter(id=tax_class_id, is_active=True).first()
+
             category = Category.objects.create(
                 name=request.POST['name'],
                 description=request.POST.get('description', ''),
                 icon=request.POST.get('icon', 'cube-outline'),
                 color=request.POST.get('color', '#3880ff'),
                 order=int(request.POST.get('order', 0)),
-                image=image
+                image=image,
+                tax_class=tax_class
             )
 
             return JsonResponse({
@@ -740,7 +769,9 @@ def category_create(request):
                 'message': str(e)
             }, status=400)
 
-    return render(request, 'inventory/category_create.html')
+    # Get tax classes for the form
+    tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'name')
+    return render(request, 'inventory/category_create.html', {'tax_classes': tax_classes})
 
 
 @login_required
@@ -756,6 +787,13 @@ def category_edit(request, pk):
             category.icon = request.POST.get('icon', 'cube-outline')
             category.color = request.POST.get('color', '#3880ff')
             category.order = int(request.POST.get('order', 0))
+
+            # Handle tax_class
+            tax_class_id = request.POST.get('tax_class_id', '').strip()
+            if tax_class_id:
+                category.tax_class = TaxClass.objects.filter(id=tax_class_id, is_active=True).first()
+            else:
+                category.tax_class = None
 
             # Actualizar imagen si se proporciona
             if 'image' in request.FILES:
@@ -776,7 +814,9 @@ def category_edit(request, pk):
                 'message': str(e)
             }, status=400)
 
-    context = {'category': category}
+    # Get tax classes for the form
+    tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'name')
+    context = {'category': category, 'tax_classes': tax_classes}
     return render(request, 'inventory/category_edit.html', context)
 
 

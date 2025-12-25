@@ -80,19 +80,19 @@
             </ion-card-header>
             <ion-card-content>
                 <div class="grid grid-cols-1 gap-3">
-                    <ion-button expand="block" href="/plugins/inventory/products/">
+                    <ion-button expand="block" href="/modules/inventory/products/">
                         <ion-icon slot="start" name="cube-outline"></ion-icon>
                         {% trans "Ver Productos" %}
                     </ion-button>
-                    <ion-button expand="block" href="/plugins/inventory/categories/" fill="outline">
+                    <ion-button expand="block" href="/modules/inventory/categories/" fill="outline">
                         <ion-icon slot="start" name="albums-outline"></ion-icon>
                         {% trans "Gestionar Categorías" %}
                     </ion-button>
-                    <ion-button expand="block" href="/plugins/inventory/reports/" fill="outline">
+                    <ion-button expand="block" href="/modules/inventory/reports/" fill="outline">
                         <ion-icon slot="start" name="stats-chart-outline"></ion-icon>
                         {% trans "Informes" %}
                     </ion-button>
-                    <ion-button expand="block" href="/plugins/inventory/settings/" fill="outline">
+                    <ion-button expand="block" href="/modules/inventory/settings/" fill="outline">
                         <ion-icon slot="start" name="settings-outline"></ion-icon>
                         {% trans "Configuración" %}
                     </ion-button>
@@ -105,7 +105,7 @@
             <ion-card-header>
                 <div class="flex justify-between items-center">
                     <ion-card-title>{% trans "Categorías" %}</ion-card-title>
-                    <ion-button size="small" fill="clear" href="/plugins/inventory/categories/">
+                    <ion-button size="small" fill="clear" href="/modules/inventory/categories/">
                         {% trans "Ver todas" %}
                         <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
                     </ion-button>
@@ -125,7 +125,7 @@
                                 <div class="text-xs" style="color: var(--ion-color-medium);">{{ category.product_count }} {% trans "productos" %}</div>
                             </div>
                         </div>
-                        <ion-button fill="clear" size="small" href="/plugins/inventory/categories/edit/{{ category.id }}/">
+                        <ion-button fill="clear" size="small" href="/modules/inventory/categories/edit/{{ category.id }}/">
                             <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
                         </ion-button>
                     </div>
@@ -135,7 +135,7 @@
                 <div class="text-center py-8" style="color: var(--ion-color-medium);">
                     <ion-icon name="albums-outline" style="font-size: 48px;"></ion-icon>
                     <p class="mt-2">{% trans "No hay categorías creadas" %}</p>
-                    <ion-button size="small" href="/plugins/inventory/categories/create/" class="mt-3">
+                    <ion-button size="small" href="/modules/inventory/categories/create/" class="mt-3">
                         {% trans "Crear primera categoría" %}
                     </ion-button>
                 </div>
@@ -153,7 +153,7 @@
                     <ion-icon name="alert-circle-outline" class="text-warning" style="vertical-align: middle;"></ion-icon>
                     {% trans "Productos con Stock Bajo" %}
                 </ion-card-title>
-                <ion-button size="small" fill="clear" href="/plugins/inventory/products/?low_stock=1">
+                <ion-button size="small" fill="clear" href="/modules/inventory/products/?low_stock=1">
                     {% trans "Ver todos" %}
                     <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
                 </ion-button>
@@ -194,7 +194,7 @@
                             </td>
                             <td class="px-4 py-3 text-center text-sm" style="color: var(--ion-color-medium);">{{ product.low_stock_threshold }}</td>
                             <td class="px-4 py-3 text-center">
-                                <ion-button size="small" fill="clear" href="/plugins/inventory/products/{{ product.id }}/edit/">
+                                <ion-button size="small" fill="clear" href="/modules/inventory/products/{{ product.id }}/edit/">
                                     <ion-icon slot="icon-only" name="create-outline"></ion-icon>
                                 </ion-button>
                             </td>
