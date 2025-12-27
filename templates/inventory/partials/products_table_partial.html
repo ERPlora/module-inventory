@@ -1,9 +1,9 @@
 {% load i18n %}
 
-<!-- Partial usado para respuestas HTMX (tabla + paginación) -->
-<div class="overflow-x-auto">
+<!-- Partial usado para respuestas HTMX (tabla con infinite scroll) -->
+<div class="scroll-ios scroll-list" style="max-height: calc(100vh - 340px);">
     <table class="w-full">
-        <thead style="background: var(--ion-color-step-50);">
+        <thead style="background: var(--ion-color-step-50); position: sticky; top: 0; z-index: 10;">
             <tr>
                 <!-- ID -->
                 <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium); width: 80px;">
@@ -21,13 +21,13 @@
                     style="color: var(--ion-color-medium);"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
-                    hx-include="[name='search'],[name='page'],[name='per_page']"
-                    hx-vals='{"order_by": "{% if request.GET.order_by == "name" %}-name{% elif request.GET.order_by == "-name" %}name{% else %}-name{% endif %}"}'
+                    hx-include="[name='search'],[name='per_page']"
+                    hx-vals='{"order_by": "{% if order_by == "name" %}-name{% elif order_by == "-name" %}name{% else %}-name{% endif %}"}'
                     hx-push-url="true">
                     {% trans "Nombre" %}
-                    {% if request.GET.order_by == "name" %}
+                    {% if order_by == "name" %}
                     <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
-                    {% elif request.GET.order_by == "-name" %}
+                    {% elif order_by == "-name" %}
                     <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
                     {% endif %}
                 </th>
@@ -38,13 +38,13 @@
                     style="color: var(--ion-color-medium);"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
-                    hx-include="[name='search'],[name='page'],[name='per_page']"
-                    hx-vals='{"order_by": "{% if request.GET.order_by == "sku" %}-sku{% elif request.GET.order_by == "-sku" %}sku{% else %}-sku{% endif %}"}'
+                    hx-include="[name='search'],[name='per_page']"
+                    hx-vals='{"order_by": "{% if order_by == "sku" %}-sku{% elif order_by == "-sku" %}sku{% else %}-sku{% endif %}"}'
                     hx-push-url="true">
                     {% trans "SKU" %}
-                    {% if request.GET.order_by == "sku" %}
+                    {% if order_by == "sku" %}
                     <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
-                    {% elif request.GET.order_by == "-sku" %}
+                    {% elif order_by == "-sku" %}
                     <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
                     {% endif %}
                 </th>
@@ -55,13 +55,13 @@
                     style="color: var(--ion-color-medium);"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
-                    hx-include="[name='search'],[name='page'],[name='per_page']"
-                    hx-vals='{"order_by": "{% if request.GET.order_by == "price" %}-price{% elif request.GET.order_by == "-price" %}price{% else %}-price{% endif %}"}'
+                    hx-include="[name='search'],[name='per_page']"
+                    hx-vals='{"order_by": "{% if order_by == "price" %}-price{% elif order_by == "-price" %}price{% else %}-price{% endif %}"}'
                     hx-push-url="true">
                     {% trans "Precio" %}
-                    {% if request.GET.order_by == "price" %}
+                    {% if order_by == "price" %}
                     <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
-                    {% elif request.GET.order_by == "-price" %}
+                    {% elif order_by == "-price" %}
                     <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
                     {% endif %}
                 </th>
@@ -72,13 +72,13 @@
                     style="color: var(--ion-color-medium);"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
-                    hx-include="[name='search'],[name='page'],[name='per_page']"
-                    hx-vals='{"order_by": "{% if request.GET.order_by == "stock" %}-stock{% elif request.GET.order_by == "-stock" %}stock{% else %}-stock{% endif %}"}'
+                    hx-include="[name='search'],[name='per_page']"
+                    hx-vals='{"order_by": "{% if order_by == "stock" %}-stock{% elif order_by == "-stock" %}stock{% else %}-stock{% endif %}"}'
                     hx-push-url="true">
                     {% trans "Stock" %}
-                    {% if request.GET.order_by == "stock" %}
+                    {% if order_by == "stock" %}
                     <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
-                    {% elif request.GET.order_by == "-stock" %}
+                    {% elif order_by == "-stock" %}
                     <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
                     {% endif %}
                 </th>
@@ -91,8 +91,22 @@
         </thead>
         {% include "inventory/partials/products_table_rows.html" %}
     </table>
-</div>
 
-<ion-card-content>
-    {% include "inventory/partials/products_pagination.html" %}
-</ion-card-content>
+    <!-- Infinite scroll trigger -->
+    {% if has_next %}
+    <div class="infinite-scroll-loader"
+         hx-get="{{ request.path }}?page={{ next_page }}{% if search %}&search={{ search }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}&per_page={{ per_page }}"
+         hx-trigger="revealed"
+         hx-target="#products-tbody"
+         hx-swap="beforeend"
+         hx-select="#products-tbody > tr, .infinite-scroll-loader, .infinite-scroll-end">
+        <ion-spinner name="crescent"></ion-spinner>
+    </div>
+    {% else %}
+    {% if total_count > 0 %}
+    <div class="infinite-scroll-end">
+        {% blocktrans count count=total_count %}{{ count }} product{% plural %}{{ count }} products{% endblocktrans %}
+    </div>
+    {% endif %}
+    {% endif %}
+</div>

@@ -1,0 +1,101 @@
+{% load i18n %}
+{# Template for subsequent infinite scroll pages (page > 1) - returns only rows + next trigger #}
+
+{% for product in products %}
+<tr class="border-b hover:bg-opacity-50" style="border-color: var(--ion-border-color);">
+    <!-- ID -->
+    <td class="px-4 py-3 text-sm font-mono" style="color: var(--ion-color-medium);">
+        {{ product.id }}
+    </td>
+
+    <!-- Image -->
+    <td class="px-4 py-3">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}"
+             class="w-12 h-12 object-cover rounded-lg"
+             style="border: 1px solid var(--ion-border-color);">
+        {% else %}
+        <div class="w-12 h-12 flex items-center justify-center rounded-lg"
+             style="background: var(--ion-color-light); border: 1px solid var(--ion-border-color);">
+            <ion-icon name="cube-outline" style="color: var(--ion-color-medium);"></ion-icon>
+        </div>
+        {% endif %}
+    </td>
+
+    <!-- Name -->
+    <td class="px-4 py-3 text-sm" style="color: var(--ion-text-color);">
+        {{ product.name }}
+    </td>
+
+    <!-- SKU -->
+    <td class="px-4 py-3 text-sm" style="color: var(--ion-text-color);">
+        {{ product.sku }}
+    </td>
+
+    <!-- Price -->
+    <td class="px-4 py-3 text-sm" style="color: var(--ion-text-color);">
+        ${{ product.price|floatformat:2 }}
+    </td>
+
+    <!-- Stock -->
+    <td class="px-4 py-3 text-sm" style="color: var(--ion-text-color);">
+        {% if product.is_low_stock %}
+        <span class="px-2 py-1 rounded-full text-xs" style="background: var(--ion-color-warning-tint); color: var(--ion-color-warning-contrast);">
+            {{ product.stock }}
+        </span>
+        {% else %}
+        {{ product.stock }}
+        {% endif %}
+    </td>
+
+    <!-- Actions -->
+    <td class="px-4 py-3">
+        <div class="flex gap-1 justify-center">
+            <ion-button size="large" fill="clear" href="{% url 'inventory:product_view' pk=product.id %}" title="{% trans 'Ver' %}">
+                <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
+            </ion-button>
+            <ion-button size="large" fill="clear" href="{% url 'inventory:product_edit' pk=product.id %}" title="{% trans 'Editar' %}">
+                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+            </ion-button>
+            {% if barcode_enabled %}
+            <ion-button size="large" fill="clear" id="barcode-btn-{{ product.id }}" title="{% trans 'Imprimir Codigo de Barras' %}">
+                <ion-icon slot="icon-only" name="barcode-outline"></ion-icon>
+            </ion-button>
+            {% endif %}
+            <ion-button size="large" fill="clear" color="danger"
+                        onclick="confirmDeleteProduct({{ product.id }}, '{{ product.name|escapejs }}', this)"
+                        title="{% trans 'Eliminar' %}">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+        </div>
+    </td>
+</tr>
+
+<!-- Barcode Modal for this product -->
+{% if barcode_enabled %}
+{% include "inventory/partials/barcode_modal.html" %}
+{% endif %}
+{% endfor %}
+
+<!-- Next page infinite scroll trigger -->
+{% if has_next %}
+<tr>
+    <td colspan="7" class="p-0">
+        <div class="infinite-scroll-loader"
+             hx-get="{{ request.path }}?page={{ next_page }}{% if search %}&search={{ search }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}&per_page={{ per_page }}"
+             hx-trigger="revealed"
+             hx-target="closest tr"
+             hx-swap="outerHTML">
+            <ion-spinner name="crescent"></ion-spinner>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="7" class="p-0">
+        <div class="infinite-scroll-end">
+            {% blocktrans count count=total_count %}{{ count }} product{% plural %}{{ count }} products{% endblocktrans %}
+        </div>
+    </td>
+</tr>
+{% endif %}
