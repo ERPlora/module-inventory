@@ -1,7 +1,7 @@
 {% load i18n %}
 
-<tbody>
-    {% for product in page_obj %}
+<tbody id="products-tbody">
+    {% for product in products %}
     <tr class="border-b hover:bg-opacity-50" style="border-color: var(--ion-border-color);">
         <!-- ID -->
         <td class="px-4 py-3 text-sm font-mono" style="color: var(--ion-color-medium);">

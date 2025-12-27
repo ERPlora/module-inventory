@@ -56,17 +56,17 @@ def dashboard(request):
 
 
 @login_required
-@htmx_view('inventory/pages/products.html', 'inventory/partials/products_content.html')
 def products_list(request):
-    """Lista de productos con DataTable"""
+    """Lista de productos con infinite scroll"""
     from .models import ProductsConfig
+    from apps.core.htmx import InfiniteScrollPaginator
 
     # Filtrar productos
     queryset = Product.objects.filter(is_active=True).prefetch_related('categories')
 
     # Búsqueda
-    if request.GET.get('search'):
-        search = request.GET['search']
+    search = request.GET.get('search', '')
+    if search:
         queryset = queryset.filter(
             Q(name__icontains=search) |
             Q(sku__icontains=search) |
@@ -79,26 +79,45 @@ def products_list(request):
     if order_by in allowed_order_fields:
         queryset = queryset.order_by(order_by)
     else:
-        queryset = queryset.order_by('-id')  # Default ordering
+        queryset = queryset.order_by('-id')
 
-    # Paginación
-    per_page = request.GET.get('per_page', '25')
-    if per_page == 'all':
-        per_page = queryset.count() or 25
-    else:
-        per_page = int(per_page)
-
-    paginator = Paginator(queryset, per_page)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+    # Infinite scroll pagination
+    per_page = int(request.GET.get('per_page', '25'))
+    paginator = InfiniteScrollPaginator(queryset, per_page=per_page)
+    page_data = paginator.get_page(request.GET.get('page', 1))
 
     config = ProductsConfig.get_config()
 
-    return {
+    context = {
         'current_view': 'products',
         'current_section': 'inventory',
-        'page_obj': page_obj,
+        'products': page_data['items'],
+        'has_next': page_data['has_next'],
+        'next_page': page_data['next_page'],
+        'is_first_page': page_data['is_first_page'],
+        'total_count': page_data['total_count'],
+        'start_index': page_data['start_index'],
+        'end_index': page_data['end_index'],
+        'page_number': page_data['page_number'],
         'barcode_enabled': config.barcode_enabled,
+        'search': search,
+        'order_by': order_by,
+        'per_page': per_page,
     }
+
+    # Determine which template to render
+    is_htmx = request.headers.get('HX-Request') or request.GET.get('partial') == 'true'
+    page_num = page_data['page_number']
+
+    if not is_htmx:
+        return render(request, 'inventory/pages/products.html', context)
+
+    if page_num > 1:
+        # Subsequent pages - only return table rows + loader
+        return render(request, 'inventory/partials/products_rows_infinite.html', context)
+
+    # First HTMX request - return full content partial
+    return render(request, 'inventory/partials/products_content.html', context)
 
 
 @login_required
