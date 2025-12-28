@@ -9,12 +9,28 @@
   "author_email": "support@erplora.com",
   "license": "MIT",
   "category": "inventory",
-  "tags": ["inventory", "stock", "products", "warehouse", "catalog", "import", "export"],
+  "industries": [
+    "retail",
+    "wholesale",
+    "ecommerce",
+    "restaurant",
+    "bar",
+    "cafe",
+    "manufacturing"
+  ],
+  "tags": [
+    "inventory",
+    "stock",
+    "products",
+    "warehouse",
+    "catalog",
+    "import",
+    "export"
+  ],
   "icon": "cube-outline",
   "homepage": "https://github.com/ERPlora/module-inventory",
   "repository_url": "https://github.com/ERPlora/module-inventory",
   "documentation": "https://docs.erplora.com/modules/inventory",
-
   "dependencies": {
     "python": [
       "Pillow>=10.0.0",
@@ -22,15 +38,16 @@
     ],
     "modules": []
   },
-
   "compatibility": {
     "min_erplora_version": "1.0.0",
     "max_erplora_version": "2.0.0"
   },
-
   "features": {
     "i18n": true,
-    "languages": ["en", "es"],
+    "languages": [
+      "en",
+      "es"
+    ],
     "api": true,
     "webhooks": false,
     "background_tasks": false,
@@ -38,7 +55,6 @@
     "supports_export": true,
     "supports_import": true
   },
-
   "permissions": [
     "inventory.view_product",
     "inventory.add_product",
@@ -49,7 +65,6 @@
     "inventory.change_category",
     "inventory.delete_category"
   ],
-
   "menu": {
     "label": "Inventory",
     "label_es": "Inventario",
@@ -57,7 +72,6 @@
     "url": "/modules/inventory/",
     "order": 10
   },
-
   "settings": {
     "allow_negative_stock": {
       "type": "boolean",
@@ -76,33 +90,68 @@
       "description_es": "Enviar alertas cuando los productos alcancen el umbral de stock bajo"
     }
   },
-
   "api_endpoints": [
-    {"path": "/api/list/", "method": "GET", "description": "List products with pagination and search"},
-    {"path": "/api/categories/", "method": "GET", "description": "List active categories"},
-    {"path": "/create/", "method": "POST", "description": "Create a new product"},
-    {"path": "/edit/<int:pk>/", "method": "POST", "description": "Update an existing product"},
-    {"path": "/delete/<int:pk>/", "method": "POST", "description": "Delete a product"},
-    {"path": "/export/csv/", "method": "GET", "description": "Export products to CSV"},
-    {"path": "/import/csv/", "method": "POST", "description": "Import products from CSV"},
-    {"path": "/import/excel/", "method": "POST", "description": "Import products from Excel"}
+    {
+      "path": "/api/list/",
+      "method": "GET",
+      "description": "List products with pagination and search"
+    },
+    {
+      "path": "/api/categories/",
+      "method": "GET",
+      "description": "List active categories"
+    },
+    {
+      "path": "/create/",
+      "method": "POST",
+      "description": "Create a new product"
+    },
+    {
+      "path": "/edit/<int:pk>/",
+      "method": "POST",
+      "description": "Update an existing product"
+    },
+    {
+      "path": "/delete/<int:pk>/",
+      "method": "POST",
+      "description": "Delete a product"
+    },
+    {
+      "path": "/export/csv/",
+      "method": "GET",
+      "description": "Export products to CSV"
+    },
+    {
+      "path": "/import/csv/",
+      "method": "POST",
+      "description": "Import products from CSV"
+    },
+    {
+      "path": "/import/excel/",
+      "method": "POST",
+      "description": "Import products from Excel"
+    }
   ],
-
   "database": {
     "migrations": true,
-    "models": ["Product", "Category"]
+    "models": [
+      "Product",
+      "Category"
+    ]
   },
-
   "static_files": {
-    "css": ["inventory/css/inventory.css"],
-    "js": ["inventory/js/avatar.js", "inventory/js/inventory.js"]
+    "css": [
+      "inventory/css/inventory.css"
+    ],
+    "js": [
+      "inventory/js/avatar.js",
+      "inventory/js/inventory.js"
+    ]
   },
-
   "media_uploads": {
     "products": "inventory/products/images/",
     "categories": "inventory/categories/"
   },
-
   "changelog": {
     "1.0.0": {
       "date": "2025-01-04",
