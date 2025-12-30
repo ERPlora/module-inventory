@@ -1,318 +1,227 @@
-{% load static %}
-{% load i18n %}
+{% load static i18n ui %}
 
 {% if request.htmx %}
-<!-- Tab bar update via OOB swap (only on HTMX navigation) -->
-<div id="dashboard-tabbar" hx-swap-oob="innerHTML">
-<ion-footer>
-{% include "inventory/partials/tabbar.html" %}
-</ion-footer>
-</div>
+{% include "inventory/partials/tabbar.html" with current_view='reports' oob=True %}
 {% endif %}
 
+{% ui_page_header title=_("Inventory Reports") subtitle=_("Detailed statistics and analysis") %}
+
 <div class="ion-padding">
-    <!-- Page Header -->
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold" style="color: var(--ion-text-color);">{% trans "Inventory Reports" %}</h1>
-        <p class="text-sm mt-1" style="color: var(--ion-color-medium);">{% trans "Detailed statistics and analysis" %}</p>
-    </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="cube-outline" class="text-xl text-primary"></ion-icon>
+    {# Primary Stats Row #}
+    <div class="ui-grid ui-grid--stats mb-lg">
+        {% ui_stat_card value=total_products label=_("Total Products") icon="cube-outline" color="primary" %}
+        {% ui_stat_card value=products_in_stock label=_("In Stock") icon="checkmark-circle-outline" color="success" %}
+        {% ui_stat_card value=products_low_stock label=_("Low Stock") icon="alert-circle-outline" color="warning" %}
+        <ion-card class="ui-stat-card m-0">
+            <ion-card-content class="p-md">
+                <div class="d-flex align-center gap-sm">
+                    <div class="ui-stat-icon ui-stat-icon--success">
+                        <ion-icon name="cash-outline"></ion-icon>
                     </div>
                     <div>
-                        <div class="text-xs text-medium">{% trans "Total Products" %}</div>
-                        <div class="text-xl font-semibold">{{ total_products }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="checkmark-circle-outline" class="text-xl text-success"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-xs text-medium">{% trans "In Stock" %}</div>
-                        <div class="text-xl font-semibold">{{ products_in_stock }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="alert-circle-outline" class="text-xl text-warning"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-xs text-medium">{% trans "Low Stock" %}</div>
-                        <div class="text-xl font-semibold">{{ products_low_stock }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="cash-outline" class="text-xl text-success"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-xs text-medium">{% trans "Total Value" %}</div>
-                        <div class="text-xl font-semibold">${{ total_inventory_value|floatformat:2 }}</div>
+                        <div class="fs-xs text-secondary">{% trans "Total Value" %}</div>
+                        <div class="ui-stat-value text-success">${{ total_inventory_value|floatformat:2 }}</div>
                     </div>
                 </div>
             </ion-card-content>
         </ion-card>
     </div>
 
-    <!-- Additional Stats Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-danger/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="close-circle-outline" class="text-xl text-danger"></ion-icon>
+    {# Secondary Stats Row #}
+    <div class="ui-grid ui-grid--stats mb-lg">
+        {% ui_stat_card value=products_out_of_stock label=_("Out of Stock") icon="close-circle-outline" color="danger" %}
+        {% ui_stat_card value=total_categories label=_("Categories") icon="albums-outline" color="primary" %}
+        {% ui_stat_card value=total_units label=_("Total Units") icon="layers-outline" color="success" %}
+        <ion-card class="ui-stat-card m-0">
+            <ion-card-content class="p-md">
+                <div class="d-flex align-center gap-sm">
+                    <div class="ui-stat-icon ui-stat-icon--warning">
+                        <ion-icon name="trending-down-outline"></ion-icon>
                     </div>
                     <div>
-                        <div class="text-xs text-medium">{% trans "Out of Stock" %}</div>
-                        <div class="text-xl font-semibold">{{ products_out_of_stock }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="albums-outline" class="text-xl text-primary"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-xs text-medium">{% trans "Categories" %}</div>
-                        <div class="text-xl font-semibold">{{ total_categories }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="layers-outline" class="text-xl text-success"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-xs text-medium">{% trans "Total Units" %}</div>
-                        <div class="text-xl font-semibold">{{ total_units }}</div>
-                    </div>
-                </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="trending-down-outline" class="text-xl text-warning"></ion-icon>
-                    </div>
-                    <div>
-                        <div class="text-xs text-medium">{% trans "Cost Value" %}</div>
-                        <div class="text-xl font-semibold">${{ total_cost_value|floatformat:2 }}</div>
+                        <div class="fs-xs text-secondary">{% trans "Cost Value" %}</div>
+                        <div class="ui-stat-value text-warning">${{ total_cost_value|floatformat:2 }}</div>
                     </div>
                 </div>
             </ion-card-content>
         </ion-card>
     </div>
 
-    <!-- Stock Status by Category -->
-    <ion-card class="m-0 mb-6">
-        <ion-card-header>
-            <ion-card-title>{% trans "Stock by Category" %}</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-            {% if category_stats %}
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead style="background: var(--ion-color-step-50);">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Category" %}</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Products" %}</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Units" %}</th>
-                            <th class="px-4 py-3 text-right text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Value" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stat in category_stats %}
-                        <tr class="border-b" style="border-color: var(--ion-border-color);">
-                            <td class="px-4 py-3 text-sm">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded flex items-center justify-center" style="background: {{ stat.color }}20;">
-                                        <ion-icon name="{{ stat.icon }}" style="color: {{ stat.color }};"></ion-icon>
-                                    </div>
-                                    <span>{{ stat.name }}</span>
+    {# Stock by Category #}
+    {% ui_card css_class="mb-lg" %}
+        <div class="mb-md">
+            <span class="fw-semibold fs-lg">{% trans "Stock by Category" %}</span>
+        </div>
+
+        {% if category_stats %}
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "Category" %}</th>
+                        <th class="cell-center">{% trans "Products" %}</th>
+                        <th class="cell-center">{% trans "Units" %}</th>
+                        <th class="cell-right">{% trans "Value" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in category_stats %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-center gap-sm">
+                                <div class="table-image-placeholder" style="width: 32px; height: 32px; background: {{ stat.color }}20; border-color: {{ stat.color }};">
+                                    <ion-icon name="{{ stat.icon }}" style="color: {{ stat.color }}; font-size: 16px;"></ion-icon>
                                 </div>
-                            </td>
-                            <td class="px-4 py-3 text-center text-sm">{{ stat.product_count }}</td>
-                            <td class="px-4 py-3 text-center text-sm">{{ stat.total_stock }}</td>
-                            <td class="px-4 py-3 text-right text-sm font-semibold" style="color: var(--ion-color-success);">${{ stat.total_value|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <span>{{ stat.name }}</span>
+                            </div>
+                        </td>
+                        <td class="cell-center">{{ stat.product_count }}</td>
+                        <td class="cell-center">{{ stat.total_stock }}</td>
+                        <td class="cell-right fw-semibold text-success">${{ stat.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="table-empty">
+            <ion-icon name="albums-outline" class="table-empty-icon"></ion-icon>
+            <p>{% trans "No categories with products" %}</p>
+        </div>
+        {% endif %}
+    {% endui_card %}
+
+    {# Top Products Cards #}
+    <div class="ui-grid ui-grid--2 mb-lg">
+        {# Top Products by Value #}
+        {% ui_card %}
+            <div class="mb-md">
+                <span class="fw-semibold fs-lg">{% trans "Top Products by Stock Value" %}</span>
+            </div>
+
+            {% if top_products_by_value %}
+            <div class="d-flex flex-column gap-sm">
+                {% for product in top_products_by_value %}
+                <div class="d-flex align-center justify-between p-sm rounded-lg" style="background: var(--bg-color-secondary);">
+                    <div class="d-flex align-center gap-sm">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="table-image" style="width: 40px; height: 40px;">
+                        {% else %}
+                        <div class="table-image-placeholder" style="width: 40px; height: 40px;">
+                            <ion-icon name="cube-outline"></ion-icon>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-medium">{{ product.name }}</div>
+                            <div class="fs-xs text-secondary">
+                                {{ product.stock }} {% trans "units" %} &times; ${{ product.price|floatformat:2 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="fw-semibold text-success">${{ product.stock_value|floatformat:2 }}</span>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
             {% else %}
-            <div class="text-center py-8" style="color: var(--ion-color-medium);">
-                <ion-icon name="albums-outline" style="font-size: 48px;"></ion-icon>
-                <p class="mt-2">{% trans "No categories with products" %}</p>
+            <div class="table-empty">
+                <p>{% trans "No products in stock" %}</p>
             </div>
             {% endif %}
-        </ion-card-content>
-    </ion-card>
+        {% endui_card %}
 
-    <!-- Top Products by Value -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <ion-card class="m-0">
-            <ion-card-header>
-                <ion-card-title>{% trans "Top Products by Stock Value" %}</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-                {% if top_products_by_value %}
-                <div class="space-y-3">
-                    {% for product in top_products_by_value %}
-                    <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--ion-color-light);">
-                        <div class="flex items-center gap-3">
-                            {% if product.image %}
-                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-10 h-10 object-cover rounded-lg">
-                            {% else %}
-                            <div class="w-10 h-10 flex items-center justify-center rounded-lg" style="background: var(--ion-color-step-100);">
-                                <ion-icon name="cube-outline" style="color: var(--ion-color-medium);"></ion-icon>
-                            </div>
-                            {% endif %}
-                            <div>
-                                <div class="font-medium" style="color: var(--ion-text-color);">{{ product.name }}</div>
-                                <div class="text-xs" style="color: var(--ion-color-medium);">
-                                    {{ product.stock }} {% trans "units" %} × ${{ product.price|floatformat:2 }}
-                                </div>
-                            </div>
+        {# Top Products by Stock Quantity #}
+        {% ui_card %}
+            <div class="mb-md">
+                <span class="fw-semibold fs-lg">{% trans "Top Products by Stock Quantity" %}</span>
+            </div>
+
+            {% if top_products_by_stock %}
+            <div class="d-flex flex-column gap-sm">
+                {% for product in top_products_by_stock %}
+                <div class="d-flex align-center justify-between p-sm rounded-lg" style="background: var(--bg-color-secondary);">
+                    <div class="d-flex align-center gap-sm">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="table-image" style="width: 40px; height: 40px;">
+                        {% else %}
+                        <div class="table-image-placeholder" style="width: 40px; height: 40px;">
+                            <ion-icon name="cube-outline"></ion-icon>
                         </div>
-                        <div class="text-right">
-                            <div class="font-semibold" style="color: var(--ion-color-success);">${{ product.stock_value|floatformat:2 }}</div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-medium">{{ product.name }}</div>
+                            <div class="fs-xs text-secondary">
+                                ${{ product.price|floatformat:2 }} {% trans "each" %}
+                            </div>
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="text-center py-8" style="color: var(--ion-color-medium);">
-                    <p>{% trans "No products in stock" %}</p>
-                </div>
-                {% endif %}
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-header>
-                <ion-card-title>{% trans "Top Products by Stock Quantity" %}</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-                {% if top_products_by_stock %}
-                <div class="space-y-3">
-                    {% for product in top_products_by_stock %}
-                    <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--ion-color-light);">
-                        <div class="flex items-center gap-3">
-                            {% if product.image %}
-                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-10 h-10 object-cover rounded-lg">
-                            {% else %}
-                            <div class="w-10 h-10 flex items-center justify-center rounded-lg" style="background: var(--ion-color-step-100);">
-                                <ion-icon name="cube-outline" style="color: var(--ion-color-medium);"></ion-icon>
-                            </div>
-                            {% endif %}
-                            <div>
-                                <div class="font-medium" style="color: var(--ion-text-color);">{{ product.name }}</div>
-                                <div class="text-xs" style="color: var(--ion-color-medium);">
-                                    ${{ product.price|floatformat:2 }} {% trans "each" %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-semibold" style="color: var(--ion-color-primary);">{{ product.stock }} {% trans "units" %}</div>
-                        </div>
+                    <div class="text-right">
+                        <span class="fw-semibold text-primary">{{ product.stock }} {% trans "units" %}</span>
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
-                <div class="text-center py-8" style="color: var(--ion-color-medium);">
-                    <p>{% trans "No products in stock" %}</p>
-                </div>
-                {% endif %}
-            </ion-card-content>
-        </ion-card>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="table-empty">
+                <p>{% trans "No products in stock" %}</p>
+            </div>
+            {% endif %}
+        {% endui_card %}
     </div>
 
-    <!-- Critical Stock Alert -->
+    {# Critical Stock Alert #}
     {% if critical_stock_products %}
-    <ion-card class="m-0">
-        <ion-card-header>
-            <div class="flex items-center gap-2">
-                <ion-icon name="warning-outline" class="text-danger"></ion-icon>
-                <ion-card-title>{% trans "Critical Stock Products" %}</ion-card-title>
-            </div>
-        </ion-card-header>
-        <ion-card-content>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead style="background: var(--ion-color-step-50);">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Product" %}</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "SKU" %}</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Current Stock" %}</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Threshold" %}</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium);">{% trans "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for product in critical_stock_products %}
-                        <tr class="border-b" style="border-color: var(--ion-border-color);">
-                            <td class="px-4 py-3 text-sm">
-                                <div class="flex items-center gap-3">
-                                    {% if product.image %}
-                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-10 h-10 object-cover rounded-lg">
-                                    {% else %}
-                                    <div class="w-10 h-10 flex items-center justify-center rounded-lg" style="background: var(--ion-color-light);">
-                                        <ion-icon name="cube-outline" style="color: var(--ion-color-medium);"></ion-icon>
-                                    </div>
-                                    {% endif %}
-                                    <span>{{ product.name }}</span>
+    {% ui_card %}
+        <div class="d-flex align-center gap-sm mb-md">
+            <ion-icon name="warning-outline" color="danger" style="font-size: 24px;"></ion-icon>
+            <span class="fw-semibold fs-lg">{% trans "Critical Stock Products" %}</span>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "Product" %}</th>
+                        <th>{% trans "SKU" %}</th>
+                        <th class="cell-center">{% trans "Current Stock" %}</th>
+                        <th class="cell-center">{% trans "Threshold" %}</th>
+                        <th class="cell-actions">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in critical_stock_products %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-center gap-sm">
+                                {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="table-image" style="width: 40px; height: 40px;">
+                                {% else %}
+                                <div class="table-image-placeholder" style="width: 40px; height: 40px;">
+                                    <ion-icon name="cube-outline"></ion-icon>
                                 </div>
-                            </td>
-                            <td class="px-4 py-3 text-sm font-mono" style="color: var(--ion-color-medium);">{{ product.sku }}</td>
-                            <td class="px-4 py-3 text-center">
-                                <span class="px-2 py-1 rounded-full text-xs font-medium" style="background: var(--ion-color-danger-tint); color: var(--ion-color-danger-contrast);">
-                                    {{ product.stock }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-center text-sm" style="color: var(--ion-color-medium);">{{ product.low_stock_threshold }}</td>
-                            <td class="px-4 py-3 text-center">
+                                {% endif %}
+                                <span>{{ product.name }}</span>
+                            </div>
+                        </td>
+                        <td class="mono text-secondary">{{ product.sku }}</td>
+                        <td class="cell-center">
+                            <span class="table-stock-badge table-stock-badge--out">{{ product.stock }}</span>
+                        </td>
+                        <td class="cell-center text-secondary">{{ product.low_stock_threshold }}</td>
+                        <td>
+                            <div class="table-actions">
                                 <ion-button size="small" fill="clear" href="{% url 'inventory:product_edit' product.id %}">
                                     <ion-icon slot="icon-only" name="create-outline"></ion-icon>
                                 </ion-button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </ion-card-content>
-    </ion-card>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endui_card %}
     {% endif %}
 </div>

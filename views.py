@@ -10,7 +10,7 @@ from apps.accounts.decorators import login_required
 from apps.core.htmx import htmx_view
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
-from django.db import models, transaction
+from django.db import models, transaction, IntegrityError
 from django.conf import settings
 from apps.configuration.models import HubConfig, StoreConfig, TaxClass
 from .models import Product, Category
@@ -108,6 +108,7 @@ def products_list(request):
     # Determine which template to render
     is_htmx = request.headers.get('HX-Request') or request.GET.get('partial') == 'true'
     page_num = page_data['page_number']
+    hx_target = request.headers.get('HX-Target', '')
 
     if not is_htmx:
         return render(request, 'inventory/pages/products.html', context)
@@ -116,7 +117,12 @@ def products_list(request):
         # Subsequent pages - only return table rows + loader
         return render(request, 'inventory/partials/products_rows_infinite.html', context)
 
-    # First HTMX request - return full content partial
+    # Check if targeting table container (search/sort) vs full content (tab navigation)
+    if hx_target == 'products-table-container':
+        # Search/sort - only return table partial
+        return render(request, 'inventory/partials/products_table_partial.html', context)
+
+    # Tab navigation - return full content partial
     return render(request, 'inventory/partials/products_content.html', context)
 
 
@@ -232,7 +238,24 @@ def product_create(request):
             # If no categories provided, leave empty (product can have no category)
 
             # Redirect to products list
-            return redirect('/plugins/inventory/products/')
+            return redirect('inventory:products_list')
+        except IntegrityError as e:
+            # Handle duplicate SKU error
+            error_msg = str(e)
+            if 'sku' in error_msg.lower() or 'unique' in error_msg.lower():
+                error_message = "Ya existe un producto con ese SKU. Por favor, use un SKU diferente."
+            else:
+                error_message = "Error de integridad en la base de datos."
+            categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+            tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
+            context = {
+                'categories': categories,
+                'tax_classes': tax_classes,
+                'mode': 'create',
+                'readonly': False,
+                'error_message': error_message
+            }
+            return render(request, 'inventory/product_form.html', context)
         except Exception as e:
             # Show error message and return to form
             categories = Category.objects.filter(is_active=True).order_by('order', 'name')
@@ -319,7 +342,25 @@ def product_edit(request, pk):
                 product.categories.clear()  # Remove all categories if none selected
 
             # Redirect to products list
-            return redirect('/plugins/inventory/products/')
+            return redirect('inventory:products_list')
+        except IntegrityError as e:
+            # Handle duplicate SKU error
+            error_msg = str(e)
+            if 'sku' in error_msg.lower() or 'unique' in error_msg.lower():
+                error_message = "Ya existe un producto con ese SKU. Por favor, use un SKU diferente."
+            else:
+                error_message = "Error de integridad en la base de datos."
+            categories = Category.objects.filter(is_active=True).order_by('order', 'name')
+            tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'rate')
+            context = {
+                'product': product,
+                'categories': categories,
+                'tax_classes': tax_classes,
+                'mode': 'edit',
+                'readonly': False,
+                'error_message': error_message
+            }
+            return render(request, 'inventory/product_form.html', context)
         except Exception as e:
             # Show error message and return to form
             categories = Category.objects.filter(is_active=True).order_by('order', 'name')
@@ -368,7 +409,7 @@ def product_view(request, pk):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["POST", "DELETE"])
 def product_delete(request, pk):
     """
     Eliminar un producto
@@ -722,9 +763,10 @@ def categories_list(request):
 
 
 @login_required
-@htmx_view('inventory/pages/categories.html', 'inventory/partials/categories_content.html')
 def categories_index(request):
-    """Vista principal de gestión de categorías con DataTable."""
+    """Vista principal de gestión de categorías con infinite scroll."""
+    from apps.core.htmx import InfiniteScrollPaginator
+
     # Filtrar categorías
     queryset = Category.objects.filter(is_active=True)
 
@@ -740,17 +782,43 @@ def categories_index(request):
     order_by = request.GET.get('order_by', 'order')
     queryset = queryset.order_by(order_by, 'name')
 
-    # Paginación
+    # Infinite scroll pagination
     per_page = int(request.GET.get('per_page', 25))
-    paginator = Paginator(queryset, per_page)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+    paginator = InfiniteScrollPaginator(queryset, per_page=per_page)
+    page_data = paginator.get_page(request.GET.get('page', 1))
 
-    return {
+    context = {
         'current_view': 'categories',
         'current_section': 'inventory',
-        'page_obj': page_obj,
-        'total_categories': Category.objects.filter(is_active=True).count()
+        'categories': page_data['items'],
+        'has_next': page_data['has_next'],
+        'next_page': page_data['next_page'],
+        'is_first_page': page_data['is_first_page'],
+        'total_count': page_data['total_count'],
+        'search': search,
+        'order_by': order_by,
+        'per_page': per_page,
     }
+
+    # Determine which template to render
+    is_htmx = request.headers.get('HX-Request') or request.GET.get('partial') == 'true'
+    page_num = page_data['page_number']
+    hx_target = request.headers.get('HX-Target', '')
+
+    if not is_htmx:
+        return render(request, 'inventory/pages/categories.html', context)
+
+    if page_num > 1:
+        # Subsequent pages - only return table rows + loader
+        return render(request, 'inventory/partials/categories_rows_infinite.html', context)
+
+    # Check if targeting table container (search/sort) vs full content (tab navigation)
+    if hx_target == 'categories-table-container':
+        # Search/sort - only return table partial
+        return render(request, 'inventory/partials/categories_table_partial.html', context)
+
+    # Tab navigation - return full content partial
+    return render(request, 'inventory/partials/categories_content.html', context)
 
 
 @login_required
@@ -790,7 +858,10 @@ def category_create(request):
 
     # Get tax classes for the form
     tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'name')
-    return render(request, 'inventory/category_create.html', {'tax_classes': tax_classes})
+    return render(request, 'inventory/category_form.html', {
+        'tax_classes': tax_classes,
+        'mode': 'create'
+    })
 
 
 @login_required
@@ -835,8 +906,12 @@ def category_edit(request, pk):
 
     # Get tax classes for the form
     tax_classes = TaxClass.objects.filter(is_active=True).order_by('order', 'name')
-    context = {'category': category, 'tax_classes': tax_classes}
-    return render(request, 'inventory/category_edit.html', context)
+    context = {
+        'category': category,
+        'tax_classes': tax_classes,
+        'mode': 'edit'
+    }
+    return render(request, 'inventory/category_form.html', context)
 
 
 @login_required

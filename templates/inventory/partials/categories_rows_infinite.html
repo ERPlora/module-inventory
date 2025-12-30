@@ -1,0 +1,73 @@
+{% load i18n %}
+{# Template for subsequent infinite scroll pages (page > 1) - returns only rows + next trigger #}
+
+{% for category in categories %}
+<tr>
+    {# ID #}
+    <td class="mono text-secondary">{{ category.id }}</td>
+
+    {# Image/Icon #}
+    <td>
+        {% if category.image %}
+        <img src="{{ category.get_image_url }}" alt="{{ category.name }}" class="table-image">
+        {% else %}
+        <div class="table-image-placeholder" style="background: {{ category.color }}20; border-color: {{ category.color }};">
+            <ion-icon name="{{ category.icon }}" style="color: {{ category.color }};"></ion-icon>
+        </div>
+        {% endif %}
+    </td>
+
+    {# Name #}
+    <td class="fw-medium">{{ category.name }}</td>
+
+    {# Description #}
+    <td class="text-secondary hide-mobile">{{ category.description|truncatewords:10|default:"—" }}</td>
+
+    {# Product Count #}
+    <td class="cell-center">
+        <span class="table-stock-badge" style="background: rgba(var(--color-primary-rgb), 0.15); color: var(--color-primary);">
+            {{ category.product_count }}
+        </span>
+    </td>
+
+    {# Order #}
+    <td class="cell-center">{{ category.order }}</td>
+
+    {# Actions #}
+    <td>
+        <div class="table-actions">
+            <ion-button size="small" fill="clear" href="{% url 'inventory:category_edit' pk=category.id %}" title="{% trans 'Edit' %}">
+                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+            </ion-button>
+            <ion-button size="small" fill="clear" color="danger"
+                        onclick="confirmDeleteCategory({{ category.id }}, '{{ category.name|escapejs }}', this)"
+                        title="{% trans 'Delete' %}">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+        </div>
+    </td>
+</tr>
+{% endfor %}
+
+{# Next page infinite scroll trigger #}
+{% if has_next %}
+<tr>
+    <td colspan="7" class="p-0">
+        <div class="infinite-scroll-loader"
+             hx-get="{{ request.path }}?page={{ next_page }}{% if search %}&search={{ search }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}&per_page={{ per_page }}"
+             hx-trigger="revealed"
+             hx-target="closest tr"
+             hx-swap="outerHTML">
+            <ion-spinner name="crescent"></ion-spinner>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="7" class="p-0">
+        <div class="infinite-scroll-end">
+            {% blocktrans count count=total_count %}{{ count }} category{% plural %}{{ count }} categories{% endblocktrans %}
+        </div>
+    </td>
+</tr>
+{% endif %}

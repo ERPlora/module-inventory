@@ -1,41 +1,33 @@
 {% load i18n %}
 
-<!-- Partial usado para respuestas HTMX (tabla con infinite scroll) -->
-<div class="scroll-ios scroll-list" style="max-height: calc(100vh - 340px);">
-    <table class="w-full">
-        <thead style="background: var(--ion-color-step-50); position: sticky; top: 0; z-index: 10;">
+{# Table with infinite scroll #}
+<div class="data-table-container">
+    <table class="data-table">
+        <thead>
             <tr>
-                <!-- ID -->
-                <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium); width: 80px;">
-                    ID
-                </th>
+                {# ID #}
+                <th class="cell-narrow">ID</th>
 
-                <!-- Image -->
-                <th class="px-4 py-3 text-left text-sm font-medium" style="color: var(--ion-color-medium); width: 80px;">
-                    {% trans "Imagen" %}
-                </th>
+                {# Image #}
+                <th class="cell-narrow">{% trans "Image" %}</th>
 
-                <!-- Name (sortable) -->
-                <th
-                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80 select-none"
-                    style="color: var(--ion-color-medium);"
+                {# Name (sortable) #}
+                <th class="sortable"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
                     hx-include="[name='search'],[name='per_page']"
                     hx-vals='{"order_by": "{% if order_by == "name" %}-name{% elif order_by == "-name" %}name{% else %}-name{% endif %}"}'
                     hx-push-url="true">
-                    {% trans "Nombre" %}
+                    {% trans "Name" %}
                     {% if order_by == "name" %}
-                    <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-up-outline" class="sort-icon"></ion-icon>
                     {% elif order_by == "-name" %}
-                    <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-down-outline" class="sort-icon"></ion-icon>
                     {% endif %}
                 </th>
 
-                <!-- SKU (sortable) -->
-                <th
-                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80 select-none"
-                    style="color: var(--ion-color-medium);"
+                {# SKU (sortable) #}
+                <th class="sortable hide-mobile"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
                     hx-include="[name='search'],[name='per_page']"
@@ -43,33 +35,29 @@
                     hx-push-url="true">
                     {% trans "SKU" %}
                     {% if order_by == "sku" %}
-                    <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-up-outline" class="sort-icon"></ion-icon>
                     {% elif order_by == "-sku" %}
-                    <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-down-outline" class="sort-icon"></ion-icon>
                     {% endif %}
                 </th>
 
-                <!-- Price (sortable) -->
-                <th
-                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80 select-none"
-                    style="color: var(--ion-color-medium);"
+                {# Price (sortable) #}
+                <th class="sortable"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
                     hx-include="[name='search'],[name='per_page']"
                     hx-vals='{"order_by": "{% if order_by == "price" %}-price{% elif order_by == "-price" %}price{% else %}-price{% endif %}"}'
                     hx-push-url="true">
-                    {% trans "Precio" %}
+                    {% trans "Price" %}
                     {% if order_by == "price" %}
-                    <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-up-outline" class="sort-icon"></ion-icon>
                     {% elif order_by == "-price" %}
-                    <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-down-outline" class="sort-icon"></ion-icon>
                     {% endif %}
                 </th>
 
-                <!-- Stock (sortable) -->
-                <th
-                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-opacity-80 select-none"
-                    style="color: var(--ion-color-medium);"
+                {# Stock (sortable) #}
+                <th class="sortable"
                     hx-get="{{ request.path }}"
                     hx-target="#products-table-container"
                     hx-include="[name='search'],[name='per_page']"
@@ -77,22 +65,20 @@
                     hx-push-url="true">
                     {% trans "Stock" %}
                     {% if order_by == "stock" %}
-                    <ion-icon name="chevron-up-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-up-outline" class="sort-icon"></ion-icon>
                     {% elif order_by == "-stock" %}
-                    <ion-icon name="chevron-down-outline" style="font-size: 14px; vertical-align: middle;"></ion-icon>
+                    <ion-icon name="chevron-down-outline" class="sort-icon"></ion-icon>
                     {% endif %}
                 </th>
 
-                <!-- Actions -->
-                <th class="px-4 py-3 text-center text-sm font-medium" style="color: var(--ion-color-medium); width: 150px;">
-                    {% trans "Acciones" %}
-                </th>
+                {# Actions #}
+                <th class="cell-actions">{% trans "Actions" %}</th>
             </tr>
         </thead>
         {% include "inventory/partials/products_table_rows.html" %}
     </table>
 
-    <!-- Infinite scroll trigger -->
+    {# Infinite scroll trigger #}
     {% if has_next %}
     <div class="infinite-scroll-loader"
          hx-get="{{ request.path }}?page={{ next_page }}{% if search %}&search={{ search }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}&per_page={{ per_page }}"

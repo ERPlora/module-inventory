@@ -1,58 +1,47 @@
 {% load i18n %}
 
-<tbody>
-    {% for category in page_obj %}
-    <tr class="border-b hover:bg-opacity-50" style="border-color: var(--ion-border-color);">
-        <!-- ID -->
-        <td class="px-4 py-3 text-sm font-mono" style="color: var(--ion-color-medium);">
-            {{ category.id }}
-        </td>
+<tbody id="categories-tbody">
+    {% for category in categories %}
+    <tr>
+        {# ID #}
+        <td class="mono text-secondary">{{ category.id }}</td>
 
-        <!-- Image/Icon -->
-        <td class="px-4 py-3">
+        {# Image/Icon #}
+        <td>
             {% if category.image %}
-            <img src="{{ category.get_image_url }}" alt="{{ category.name }}"
-                 class="w-12 h-12 object-cover rounded-lg"
-                 style="border: 1px solid var(--ion-border-color);">
+            <img src="{{ category.get_image_url }}" alt="{{ category.name }}" class="table-image">
             {% else %}
-            <div class="w-12 h-12 flex items-center justify-center rounded-lg"
-                 style="background: {{ category.color }}20; border: 1px solid {{ category.color }};">
-                <ion-icon name="{{ category.icon }}" style="color: {{ category.color }}; font-size: 24px;"></ion-icon>
+            <div class="table-image-placeholder" style="background: {{ category.color }}20; border-color: {{ category.color }};">
+                <ion-icon name="{{ category.icon }}" style="color: {{ category.color }};"></ion-icon>
             </div>
             {% endif %}
         </td>
 
-        <!-- Name -->
-        <td class="px-4 py-3 text-sm" style="color: var(--ion-text-color);">
-            {{ category.name }}
-        </td>
+        {# Name #}
+        <td class="fw-medium">{{ category.name }}</td>
 
-        <!-- Description -->
-        <td class="px-4 py-3 text-sm" style="color: var(--ion-color-medium);">
-            {{ category.description|truncatewords:10|default:"—" }}
-        </td>
+        {# Description #}
+        <td class="text-secondary hide-mobile">{{ category.description|truncatewords:10|default:"—" }}</td>
 
-        <!-- Product Count -->
-        <td class="px-4 py-3 text-sm text-center" style="color: var(--ion-text-color);">
-            <span class="px-2 py-1 rounded-full text-xs" style="background: var(--ion-color-primary-tint); color: var(--ion-color-primary-contrast);">
+        {# Product Count #}
+        <td class="cell-center">
+            <span class="table-stock-badge" style="background: rgba(var(--color-primary-rgb), 0.15); color: var(--color-primary);">
                 {{ category.product_count }}
             </span>
         </td>
 
-        <!-- Order -->
-        <td class="px-4 py-3 text-sm text-center" style="color: var(--ion-text-color);">
-            {{ category.order }}
-        </td>
+        {# Order #}
+        <td class="cell-center">{{ category.order }}</td>
 
-        <!-- Actions -->
-        <td class="px-4 py-3">
-            <div class="flex gap-1 justify-center">
-                <ion-button size="large" fill="clear" href="{% url 'inventory:category_edit' pk=category.id %}" title="{% trans 'Editar' %}">
+        {# Actions #}
+        <td>
+            <div class="table-actions">
+                <ion-button size="small" fill="clear" href="{% url 'inventory:category_edit' pk=category.id %}" title="{% trans 'Edit' %}">
                     <ion-icon slot="icon-only" name="create-outline"></ion-icon>
                 </ion-button>
-                <ion-button size="large" fill="clear" color="danger"
+                <ion-button size="small" fill="clear" color="danger"
                             onclick="confirmDeleteCategory({{ category.id }}, '{{ category.name|escapejs }}', this)"
-                            title="{% trans 'Eliminar' %}">
+                            title="{% trans 'Delete' %}">
                     <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
                 </ion-button>
             </div>
@@ -60,10 +49,10 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="7" class="text-center py-12" style="color: var(--ion-color-medium);">
-            <div class="flex flex-col items-center gap-3">
-                <ion-icon name="folder-open-outline" style="font-size: 48px;"></ion-icon>
-                <span>{% trans "No se encontraron categorías" %}</span>
+        <td colspan="7">
+            <div class="table-empty">
+                <ion-icon name="folder-open-outline" class="table-empty-icon"></ion-icon>
+                <p>{% trans "No categories found" %}</p>
             </div>
         </td>
     </tr>
