@@ -1,17 +1,7 @@
-{% extends "ui/content_base.html" %}
-{% load static %}
-{% load i18n %}
+{% extends "ui/app_base.html" %}
+{% load static i18n %}
 
 {% block page_title %}{% trans "Products" %}{% endblock %}
-
-{# Section context for sidebar highlighting #}
-{% block content %}
-{% with current_section="inventory" section_title=_("Inventory") %}
-{{ block.super }}
-{% endwith %}
-{% endblock %}
-
-{# Tabbar is now automatically rendered by content_base.html using module_id from context #}
 
 {% block page_content %}
 {% include "inventory/partials/products_content.html" %}

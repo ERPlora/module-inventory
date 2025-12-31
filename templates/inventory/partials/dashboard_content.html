@@ -24,7 +24,7 @@
     {% ui_card css_class="mb-lg" %}
         <div class="d-flex justify-between align-center mb-md">
             <span class="fw-semibold fs-lg">{% trans "Categories" %}</span>
-            {% ui_button label=_("View all") fill="clear" size="small" icon="arrow-forward-outline" icon_slot="end" hx_get=categories_url hx_target="#dashboard-content" hx_push_url=True %}
+            {% ui_button label=_("View all") fill="clear" size="small" icon="arrow-forward-outline" icon_slot="end" hx_get=categories_url hx_target="#main-content-area" hx_push_url=True %}
         </div>
         {% if categories %}
         <div class="category-list">
@@ -55,7 +55,7 @@
                 <ion-icon name="alert-circle-outline" color="warning"></ion-icon>
                 <span class="fw-semibold">{% trans "Low Stock Products" %}</span>
             </div>
-            {% ui_button label=_("View all") fill="clear" size="small" icon="arrow-forward-outline" icon_slot="end" hx_get=products_url hx_target="#dashboard-content" hx_push_url=True %}
+            {% ui_button label=_("View all") fill="clear" size="small" icon="arrow-forward-outline" icon_slot="end" hx_get=products_url hx_target="#main-content-area" hx_push_url=True %}
         </div>
         {% ui_list lines="full" %}
             {% for product in low_stock_products %}
