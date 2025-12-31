@@ -11,11 +11,7 @@
 {% endwith %}
 {% endblock %}
 
-{% block module_tabbar %}
-
-{% include "inventory/partials/tabbar.html" %}
-
-{% endblock %}
+{# Tabbar is now automatically rendered by content_base.html using module_id from context #}
 
 {% block page_content %}
 {% include "inventory/partials/reports_content.html" %}
