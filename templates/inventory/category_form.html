@@ -1,5 +1,5 @@
 {% extends "ui/app_base.html" %}
-{% load static i18n ui %}
+{% load static i18n ui component_tags %}
 
 {% block page_title %}
     {% if mode == 'create' %}{% trans "Create Category" %}
@@ -261,4 +261,7 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
     }
 });
 </script>
+
+{# Update tabbar for this module #}
+{% component "tabbar" module_id="inventory" current_view="categories" %}{% endcomponent %}
 {% endblock %}

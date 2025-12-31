@@ -1,5 +1,5 @@
 {% extends "ui/app_base.html" %}
-{% load static i18n ui %}
+{% load static i18n ui component_tags %}
 
 {% block page_title %}
     {% if mode == 'create' %}{% trans "Create Product" %}
@@ -323,4 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
 });
 </script>
+
+{# Update tabbar for this module #}
+{% component "tabbar" module_id="inventory" current_view="products" %}{% endcomponent %}
 {% endblock %}
