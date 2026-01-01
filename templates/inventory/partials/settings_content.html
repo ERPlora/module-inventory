@@ -4,41 +4,46 @@
     title=_("Inventory Settings")
     subtitle=_("Configure inventory module behavior")
     module_id="inventory"
-    tabbar_view="settings"
-    alpine_app="settingsApp" %}
+    tabbar_view="settings" %}
 
     {% fill "settings" %}
         {% component "setting_section" title=_("Stock Management") %}
-            {% component "setting_toggle"
+            {% component "toggle"
                 name="allow_negative_stock"
                 title=_("Allow Negative Stock")
                 description=_("Allow products to have negative stock values")
                 checked=config.allow_negative_stock
-                color="warning" %}{% endcomponent %}
+                color="warning"
+                hx_post="/m/inventory/settings/toggle/" %}{% endcomponent %}
 
-            {% component "setting_toggle"
+            {% component "toggle"
                 name="low_stock_alert_enabled"
                 title=_("Low Stock Alerts")
                 description=_("Send alerts when products reach low stock threshold")
-                checked=config.low_stock_alert_enabled %}{% endcomponent %}
+                checked=config.low_stock_alert_enabled
+                hx_post="/m/inventory/settings/toggle/" %}{% endcomponent %}
         {% endcomponent %}
 
         {% component "setting_section" title=_("Product Display") %}
-            {% component "setting_toggle"
+            {% component "toggle"
                 name="barcode_enabled"
                 title=_("Barcode Generation")
                 description=_("Enable barcode generation and display for products")
-                checked=config.barcode_enabled %}{% endcomponent %}
+                checked=config.barcode_enabled
+                hx_post="/m/inventory/settings/toggle/" %}{% endcomponent %}
         {% endcomponent %}
     {% endfill %}
 
     {% fill "actions" %}
-        <div class="mt-lg pt-md" style="border-top: 1px solid var(--border-color);">
+        <div class="setting-actions mt-lg pt-md">
             <ion-button
                 color="medium"
                 fill="outline"
                 expand="block"
-                @click="resetToDefaults()">
+                hx-post="/m/inventory/settings/reset/"
+                hx-confirm="{% trans 'Reset all settings to defaults?' %}"
+                hx-target="#main-content-area"
+                hx-include="[name='csrfmiddlewaretoken']">
                 <ion-icon slot="start" name="refresh-outline"></ion-icon>
                 {% trans "Reset to Defaults" %}
             </ion-button>
@@ -46,9 +51,9 @@
     {% endfill %}
 
     {% fill "footer" %}
-        <div class="mt-lg p-md rounded-lg" style="background: var(--bg-color-secondary);">
+        <div class="setting-info mt-lg p-md rounded-lg">
             <div class="d-flex align-start gap-sm">
-                <ion-icon name="information-circle-outline" style="font-size: 20px; color: var(--color-primary); flex-shrink: 0; margin-top: 2px;"></ion-icon>
+                <ion-icon name="information-circle-outline" class="setting-info__icon"></ion-icon>
                 <p class="fs-sm text-secondary m-0">
                     {% trans "This configuration is saved locally in the Hub and affects the inventory module behavior. Changes are applied immediately." %}
                 </p>
@@ -56,84 +61,3 @@
         </div>
     {% endfill %}
 {% endcomponent %}
-
-<script>
-function settingsApp() {
-    return {
-        settings: {
-            allow_negative_stock: {{ config.allow_negative_stock|yesno:"true,false" }},
-            low_stock_alert_enabled: {{ config.low_stock_alert_enabled|yesno:"true,false" }},
-            barcode_enabled: {{ config.barcode_enabled|yesno:"true,false" }}
-        },
-
-        init() {
-            this.$nextTick(() => {
-                this.setupToggle('toggle_allow_negative_stock', 'allow_negative_stock');
-                this.setupToggle('toggle_low_stock_alert_enabled', 'low_stock_alert_enabled');
-                this.setupToggle('toggle_barcode_enabled', 'barcode_enabled');
-            });
-        },
-
-        setupToggle(refName, settingKey) {
-            const toggle = this.$refs[refName];
-            if (toggle) {
-                toggle.addEventListener('ionChange', (e) => {
-                    this.updateSetting(settingKey, e.detail.checked);
-                });
-            }
-        },
-
-        async updateSetting(key, value) {
-            this.settings[key] = value;
-
-            try {
-                const response = await fetch('{% url "inventory:settings" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Alpine.store('ui').getCsrfToken()
-                    },
-                    body: JSON.stringify(this.settings)
-                });
-
-                if (response.ok) {
-                    Alpine.store('ui').success('{% trans "Settings saved" %}');
-                } else {
-                    throw new Error();
-                }
-            } catch (error) {
-                Alpine.store('ui').error('{% trans "Error saving settings" %}');
-                this.settings[key] = !value;
-            }
-        },
-
-        async resetToDefaults() {
-            this.settings = {
-                allow_negative_stock: false,
-                low_stock_alert_enabled: true,
-                barcode_enabled: true
-            };
-
-            try {
-                const response = await fetch('{% url "inventory:settings" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': Alpine.store('ui').getCsrfToken()
-                    },
-                    body: JSON.stringify(this.settings)
-                });
-
-                if (response.ok) {
-                    Alpine.store('ui').toast('{% trans "Settings reset to defaults" %}', 'warning');
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    throw new Error();
-                }
-            } catch (error) {
-                Alpine.store('ui').error('{% trans "Error resetting settings" %}');
-            }
-        }
-    }
-}
-</script>

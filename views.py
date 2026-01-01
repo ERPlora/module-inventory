@@ -7,7 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from apps.accounts.decorators import login_required
-from apps.core.htmx import htmx_view
+from apps.modules_runtime.decorators import module_view
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F
 from django.db import models, transaction, IntegrityError
@@ -17,7 +17,7 @@ from .models import Product, Category
 
 
 @login_required
-@htmx_view('inventory/pages/index.html', 'inventory/partials/dashboard_content.html')
+@module_view("inventory", "dashboard")
 def dashboard(request):
     """Dashboard principal del inventario con estadísticas y resumen"""
     # Obtener configuración global
@@ -43,8 +43,6 @@ def dashboard(request):
     ).order_by('stock')[:10]
 
     return {
-        'current_view': 'dashboard',
-        'current_section': 'inventory',
         'total_products': total_products,
         'products_in_stock': products_in_stock,
         'products_low_stock': products_low_stock,
@@ -56,6 +54,7 @@ def dashboard(request):
 
 
 @login_required
+@module_view("inventory", "products")
 def products_list(request):
     """Lista de productos con infinite scroll"""
     from .models import ProductsConfig
@@ -89,8 +88,6 @@ def products_list(request):
     config = ProductsConfig.get_config()
 
     context = {
-        'current_view': 'products',
-        'current_section': 'inventory',
         'products': page_data['items'],
         'has_next': page_data['has_next'],
         'next_page': page_data['next_page'],
@@ -105,25 +102,21 @@ def products_list(request):
         'per_page': per_page,
     }
 
-    # Determine which template to render
+    # Handle partial requests for infinite scroll and search
     is_htmx = request.headers.get('HX-Request') or request.GET.get('partial') == 'true'
     page_num = page_data['page_number']
     hx_target = request.headers.get('HX-Target', '')
-
-    if not is_htmx:
-        return render(request, 'inventory/pages/products.html', context)
 
     if page_num > 1:
         # Subsequent pages - only return table rows + loader
         return render(request, 'inventory/partials/products_rows_infinite.html', context)
 
-    # Check if targeting table container (search/sort) vs full content (tab navigation)
     if hx_target == 'products-table-container':
         # Search/sort - only return table partial
         return render(request, 'inventory/partials/products_table_partial.html', context)
 
-    # Tab navigation - return full content partial
-    return render(request, 'inventory/partials/products_content.html', context)
+    # Tab navigation or full page - let @module_view handle it
+    return context
 
 
 @login_required
@@ -763,6 +756,7 @@ def categories_list(request):
 
 
 @login_required
+@module_view("inventory", "categories")
 def categories_index(request):
     """Vista principal de gestión de categorías con infinite scroll."""
     from apps.core.htmx import InfiniteScrollPaginator
@@ -788,8 +782,6 @@ def categories_index(request):
     page_data = paginator.get_page(request.GET.get('page', 1))
 
     context = {
-        'current_view': 'categories',
-        'current_section': 'inventory',
         'categories': page_data['items'],
         'has_next': page_data['has_next'],
         'next_page': page_data['next_page'],
@@ -800,25 +792,20 @@ def categories_index(request):
         'per_page': per_page,
     }
 
-    # Determine which template to render
-    is_htmx = request.headers.get('HX-Request') or request.GET.get('partial') == 'true'
+    # Handle partial requests for infinite scroll and search
     page_num = page_data['page_number']
     hx_target = request.headers.get('HX-Target', '')
-
-    if not is_htmx:
-        return render(request, 'inventory/pages/categories.html', context)
 
     if page_num > 1:
         # Subsequent pages - only return table rows + loader
         return render(request, 'inventory/partials/categories_rows_infinite.html', context)
 
-    # Check if targeting table container (search/sort) vs full content (tab navigation)
     if hx_target == 'categories-table-container':
         # Search/sort - only return table partial
         return render(request, 'inventory/partials/categories_table_partial.html', context)
 
-    # Tab navigation - return full content partial
-    return render(request, 'inventory/partials/categories_content.html', context)
+    # Tab navigation or full page - let @module_view handle it
+    return context
 
 
 @login_required
@@ -943,7 +930,7 @@ def category_delete(request, pk):
 
 
 @login_required
-@htmx_view('inventory/pages/reports.html', 'inventory/partials/reports_content.html')
+@module_view("inventory", "reports")
 def reports_view(request):
     """Vista de informes/reportes del inventario"""
     # Estadísticas generales
@@ -1016,8 +1003,6 @@ def reports_view(request):
     ).order_by('stock')[:20]
 
     return {
-        'current_view': 'reports',
-        'current_section': 'inventory',
         'total_products': total_products,
         'products_in_stock': products_in_stock,
         'products_out_of_stock': products_out_of_stock,
@@ -1034,9 +1019,10 @@ def reports_view(request):
 
 
 @login_required
+@module_view("inventory", "settings")
 def settings_view(request):
     """Vista de configuración del plugin de inventario"""
-    import json
+    import json as json_module
     from .models import ProductsConfig
 
     config = ProductsConfig.get_config()
@@ -1044,7 +1030,7 @@ def settings_view(request):
     if request.method == "POST":
         try:
             # Parse JSON body
-            data = json.loads(request.body)
+            data = json_module.loads(request.body)
 
             # Update config
             config.allow_negative_stock = data.get('allow_negative_stock', False)
@@ -1056,16 +1042,55 @@ def settings_view(request):
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)}, status=400)
 
-    context = {
-        'current_view': 'settings',
-        'current_section': 'inventory',
-        "config": config,
-    }
+    return {"config": config}
 
-    # Use htmx pattern manually since POST needs special handling
-    if request.headers.get('HX-Request'):
-        return render(request, "inventory/partials/settings_content.html", context)
-    return render(request, "inventory/pages/settings.html", context)
+
+@login_required
+@require_http_methods(["POST"])
+def settings_toggle(request):
+    """HTMX endpoint for toggling individual settings"""
+    from .models import ProductsConfig
+
+    config = ProductsConfig.get_config()
+    name = request.POST.get('name')
+    value = request.POST.get('value', '').lower()
+
+    if not name:
+        return HttpResponse(status=400)
+
+    # Validate the setting name exists
+    if not hasattr(config, name):
+        return HttpResponse(status=400)
+
+    # Convert string value to boolean
+    new_value = value == 'true'
+
+    # Update the specific setting
+    setattr(config, name, new_value)
+    config.save()
+
+    # Return HX-Trigger header to show toast
+    response = HttpResponse(status=204)
+    response['HX-Trigger'] = '{"showToast": {"message": "Setting saved", "color": "success"}}'
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def settings_reset(request):
+    """HTMX endpoint for resetting settings to defaults"""
+    from .models import ProductsConfig
+
+    config = ProductsConfig.get_config()
+
+    # Reset to defaults
+    config.allow_negative_stock = False
+    config.low_stock_alert_enabled = True
+    config.barcode_enabled = True
+    config.save()
+
+    # Re-render settings page
+    return render(request, "inventory/partials/settings_content.html", {"config": config})
 
 
 @login_required

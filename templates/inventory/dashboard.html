@@ -1,0 +1,74 @@
+{% extends "ui/module_content.html" %}
+{% load static i18n ui %}
+
+{% block content %}
+{# Define URLs once at the top #}
+{% url 'inventory:categories_index' as categories_url %}
+{% url 'inventory:products_list' as products_url %}
+
+{# Stats Cards Grid #}
+<div class="ui-grid ui-grid--stats mb-lg">
+    {% ui_stat_card value=total_products label=_("Total Products") icon="cube-outline" color="primary" %}
+    {% ui_stat_card value=products_in_stock label=_("In Stock") icon="checkmark-circle-outline" color="success" %}
+    {% ui_stat_card value=products_low_stock label=_("Low Stock") icon="alert-circle-outline" color="warning" %}
+    {% ui_stat_card value=total_inventory_value|floatformat:2 label=_("Total Value") icon="cash-outline" color="success" %}
+</div>
+
+{# Categories Summary #}
+{% ui_card css_class="mb-lg" %}
+    <div class="d-flex justify-between align-center mb-md">
+        <span class="fw-semibold fs-lg">{% trans "Categories" %}</span>
+        {% ui_button label=_("View all") fill="clear" size="small" icon="arrow-forward-outline" icon_slot="end" hx_get=categories_url hx_target="#main-content-area" hx_push_url=True %}
+    </div>
+    {% if categories %}
+    <div class="category-list">
+        {% for category in categories %}
+        <div class="category-item">
+            <div class="category-item-info">
+                <div class="category-item-icon" style="background: {{ category.color }}20;">
+                    <ion-icon name="{{ category.icon }}" style="color: {{ category.color }};"></ion-icon>
+                </div>
+                <div>
+                    <div class="category-item-name">{{ category.name }}</div>
+                    <div class="category-item-count">{{ category.product_count }} {% trans "products" %}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    {% ui_empty_state title=_("No categories created") icon="albums-outline" %}
+    {% endif %}
+{% endui_card %}
+
+{# Low Stock Products #}
+{% if low_stock_products %}
+{% ui_card css_class="mb-lg" %}
+    <div class="d-flex justify-between align-center mb-md">
+        <div class="d-flex align-center gap-sm">
+            <ion-icon name="alert-circle-outline" color="warning"></ion-icon>
+            <span class="fw-semibold">{% trans "Low Stock Products" %}</span>
+        </div>
+        {% ui_button label=_("View all") fill="clear" size="small" icon="arrow-forward-outline" icon_slot="end" hx_get=products_url hx_target="#main-content-area" hx_push_url=True %}
+    </div>
+    {% ui_list lines="full" %}
+        {% for product in low_stock_products %}
+        <ion-item class="low-stock-item">
+            <div slot="start" class="low-stock-item-image">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                <ion-icon name="cube-outline"></ion-icon>
+                {% endif %}
+            </div>
+            <ion-label>
+                <h3>{{ product.name }}</h3>
+                <p>{{ product.sku }}</p>
+            </ion-label>
+            {% ui_badge label=product.stock color="warning" %}
+        </ion-item>
+        {% endfor %}
+    {% endui_list %}
+{% endui_card %}
+{% endif %}
+{% endblock %}
