@@ -21,7 +21,7 @@ MODULE_INDUSTRIES = [
     "bar",           # Bars & pubs
     "cafe",          # Cafes & bakeries
     "fast_food",     # Fast food
-    "salon",         # Beauty & wellness
+    "beauty",        # Beauty & wellness
     "manufacturing", # Manufacturing
 ]
 
