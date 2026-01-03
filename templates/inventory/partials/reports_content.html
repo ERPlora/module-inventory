@@ -4,7 +4,9 @@
     title=_("Inventory Reports")
     subtitle=_("Detailed statistics and analysis")
     module_id="inventory"
-    tabbar_view="reports" %}
+    tabbar_view="reports"
+    navigation=navigation
+    render_tabbar=render_tabbar %}
 
     {% fill "content" %}
         {# Primary Stats Row #}
@@ -225,3 +227,6 @@
         {% endif %}
     {% endfill %}
 {% endcomponent %}
+
+{# Tabbar OOB swap - must be OUTSIDE the component #}
+{% include "ui/includes/tabbar_oob.html" %}

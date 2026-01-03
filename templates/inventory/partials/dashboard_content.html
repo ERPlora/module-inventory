@@ -4,7 +4,9 @@
     title=_("Inventory")
     subtitle=_("Products, categories and stock management")
     module_id="inventory"
-    tabbar_view="dashboard" %}
+    tabbar_view="dashboard"
+    navigation=navigation
+    render_tabbar=render_tabbar %}
 
     {% fill "content" %}
         {# Define URLs once at the top #}
@@ -78,3 +80,6 @@
         {% endif %}
     {% endfill %}
 {% endcomponent %}
+
+{# Tabbar OOB swap - must be OUTSIDE the component #}
+{% include "ui/includes/tabbar_oob.html" %}

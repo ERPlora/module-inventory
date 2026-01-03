@@ -9,8 +9,8 @@ from inventory.models import Product, Category
 
 
 @pytest.fixture
-def user(db):
-    """Create test user."""
+def user(db, hub_config, store_config):
+    """Create test user (depends on hub_config/store_config for middleware)."""
     user = LocalUser.objects.create(
         email='test@example.com',
         name='Test User',
@@ -23,8 +23,8 @@ def user(db):
 
 
 @pytest.fixture
-def authenticated_client(user):
-    """Create authenticated client."""
+def authenticated_client(user, hub_config, store_config):
+    """Create authenticated client with required config."""
     client = Client()
     session = client.session
     session['local_user_id'] = str(user.id)
@@ -47,31 +47,32 @@ def category(db):
 
 @pytest.fixture
 def product(category):
-    """Create test product."""
-    return Product.objects.create(
+    """Create test product with M2M category."""
+    product = Product.objects.create(
         name='Test Product',
         sku='TST-001',
         price=Decimal('10.00'),
         cost=Decimal('5.00'),
         stock=100,
-        category=category
     )
+    product.categories.add(category)
+    return product
 
 
 @pytest.mark.django_db
 class TestProductViews:
     """Tests for product views."""
 
-    def test_index_requires_login(self):
-        """Test index view requires authentication."""
+    def test_dashboard_requires_login(self, hub_config, store_config):
+        """Test dashboard view requires authentication."""
         client = Client()
-        response = client.get(reverse('inventory:index'))
+        response = client.get(reverse('inventory:dashboard'))
 
         assert response.status_code == 302  # Redirect to login
 
-    def test_index_authenticated(self, authenticated_client):
-        """Test index view with authentication."""
-        response = authenticated_client.get(reverse('inventory:index'))
+    def test_dashboard_authenticated(self, authenticated_client):
+        """Test dashboard view with authentication."""
+        response = authenticated_client.get(reverse('inventory:dashboard'))
 
         assert response.status_code == 200
         assert 'total_products' in response.context
@@ -99,15 +100,16 @@ class TestProductViews:
             'price': '19.99',
             'cost': '10.00',
             'stock': '50',
-            'category_id': category.id
+            'category_names': category.name,  # Use category_names for M2M
         }
 
         response = authenticated_client.post(reverse('inventory:product_create'), data)
 
-        assert response.status_code == 200
+        # Should redirect to products list on success
+        assert response.status_code == 302
         assert Product.objects.filter(sku='NEW-001').exists()
 
-    def test_product_edit(self, authenticated_client, product):
+    def test_product_edit(self, authenticated_client, product, category):
         """Test product edit."""
         data = {
             'name': 'Updated Product',
@@ -115,7 +117,7 @@ class TestProductViews:
             'price': '25.00',
             'cost': '15.00',
             'stock': '200',
-            'category_id': product.category.id
+            'category_names': category.name,  # Use category_names for M2M
         }
 
         response = authenticated_client.post(
@@ -123,9 +125,10 @@ class TestProductViews:
             data
         )
 
-        assert response.status_code == 200
+        # Should redirect to products list on success
+        assert response.status_code == 302
         product.refresh_from_db()
-        assert product.name == 'Updated Product'
+        assert product.name == 'Updated product'  # capitalize() applied
         assert product.price == Decimal('25.00')
 
     def test_product_delete(self, authenticated_client, product):
@@ -158,7 +161,7 @@ class TestCategoryViews:
 
         assert response.status_code == 200
         assert 'categories' in response.context
-        assert response.context['total_categories'] == 1
+        assert response.context['total_count'] == 1
 
     def test_category_create(self, authenticated_client):
         """Test category create."""
@@ -175,7 +178,8 @@ class TestCategoryViews:
         )
 
         assert response.status_code == 200
-        assert Category.objects.filter(name='New Category').exists()
+        # capitalize() applied by model save()
+        assert Category.objects.filter(name='New category').exists()
 
     def test_category_edit(self, authenticated_client, category):
         """Test category edit."""
@@ -193,7 +197,8 @@ class TestCategoryViews:
 
         assert response.status_code == 200
         category.refresh_from_db()
-        assert category.name == 'Updated Category'
+        # capitalize() applied by model save()
+        assert category.name == 'Updated category'
 
     def test_category_delete_with_products(self, authenticated_client, category, product):
         """Test cannot delete category with products."""

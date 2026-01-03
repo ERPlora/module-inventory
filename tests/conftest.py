@@ -63,7 +63,33 @@ def user(db):
 
 
 @pytest.fixture
-def sample_product(db):
+def hub_config(db):
+    """Create required HubConfig for tests (required by setup middleware)."""
+    from apps.configuration.models import HubConfig
+    config, _ = HubConfig.objects.get_or_create(id=1, defaults={
+        'is_configured': True,
+        'currency': 'EUR',
+    })
+    # Ensure is_configured is True
+    if not config.is_configured:
+        config.is_configured = True
+        config.save()
+    return config
+
+
+@pytest.fixture
+def store_config(db, hub_config):
+    """Create required StoreConfig for tests."""
+    from apps.configuration.models import StoreConfig
+    config = StoreConfig.get_solo()
+    config.business_name = 'Test Store'
+    config.is_configured = True  # Mark as configured to skip setup wizard
+    config.save()
+    return config
+
+
+@pytest.fixture
+def sample_product(db, store_config):
     """Create a sample product for testing."""
     from inventory.models import Category, Product
 
@@ -72,11 +98,13 @@ def sample_product(db):
         is_active=True
     )
 
-    return Product.objects.create(
+    product = Product.objects.create(
         name="Test Product",
-        category=category,
+        sku="TEST-001",
         price=Decimal('10.00'),
-        stock_quantity=100,
-        min_stock=10,
+        stock=100,
+        low_stock_threshold=10,
         is_active=True
     )
+    product.categories.add(category)
+    return product

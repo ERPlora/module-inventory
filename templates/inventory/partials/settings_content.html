@@ -4,7 +4,9 @@
     title=_("Inventory Settings")
     subtitle=_("Configure inventory module behavior")
     module_id="inventory"
-    tabbar_view="settings" %}
+    tabbar_view="settings"
+    navigation=navigation
+    render_tabbar=render_tabbar %}
 
     {% fill "settings" %}
         {% component "setting_section" title=_("Stock Management") %}
@@ -61,3 +63,6 @@
         </div>
     {% endfill %}
 {% endcomponent %}
+
+{# Tabbar OOB swap - must be OUTSIDE the component #}
+{% include "ui/includes/tabbar_oob.html" %}

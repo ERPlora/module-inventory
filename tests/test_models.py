@@ -41,30 +41,31 @@ class TestCategory:
         """Test product_count property."""
         category = Category.objects.create(name='Test Category')
 
-        # Create active products
-        Product.objects.create(
+        # Create active products and add to category (M2M)
+        product1 = Product.objects.create(
             name='Product 1',
             sku='SKU001',
             price=Decimal('10.00'),
-            category=category,
             is_active=True
         )
-        Product.objects.create(
+        product1.categories.add(category)
+
+        product2 = Product.objects.create(
             name='Product 2',
             sku='SKU002',
             price=Decimal('15.00'),
-            category=category,
             is_active=True
         )
+        product2.categories.add(category)
 
         # Create inactive product (should not count)
-        Product.objects.create(
+        product3 = Product.objects.create(
             name='Product 3',
             sku='SKU003',
             price=Decimal('20.00'),
-            category=category,
             is_active=False
         )
+        product3.categories.add(category)
 
         assert category.product_count == 2
 
@@ -85,15 +86,16 @@ class TestProduct:
             cost=Decimal('1.00'),
             stock=100,
             low_stock_threshold=10,
-            category=category
         )
+        product.categories.add(category)
 
-        assert product.name == 'Coca Cola'
+        assert product.name == 'Coca cola'  # capitalize() applied
         assert product.sku == 'CC-001'
         assert product.price == Decimal('2.50')
         assert product.cost == Decimal('1.00')
         assert product.stock == 100
         assert product.is_active is True
+        assert category in product.categories.all()
 
     def test_is_low_stock(self):
         """Test is_low_stock property."""
@@ -151,7 +153,7 @@ class TestProduct:
             price=Decimal('10.00')
         )
 
-        assert str(product) == 'Test Product (TST-001)'
+        assert str(product) == 'Test product (TST-001)'  # capitalize() applied
 
     def test_unique_sku(self):
         """Test SKU must be unique."""
@@ -192,8 +194,8 @@ def category():
 
 @pytest.fixture
 def product(category):
-    """Create test product."""
-    return Product.objects.create(
+    """Create test product with M2M category."""
+    product = Product.objects.create(
         name='Test Product',
         sku='TST-001',
         description='Test Description',
@@ -201,5 +203,6 @@ def product(category):
         cost=Decimal('5.00'),
         stock=100,
         low_stock_threshold=10,
-        category=category
     )
+    product.categories.add(category)
+    return product

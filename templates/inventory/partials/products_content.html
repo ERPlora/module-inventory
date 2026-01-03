@@ -3,7 +3,9 @@
 {% component "list_page"
     title=_("Products")
     module_id="inventory"
-    tabbar_view="products" %}
+    tabbar_view="products"
+    navigation=navigation
+    render_tabbar=render_tabbar %}
 
     {% fill "filters" %}
         {% component "filter_bar"
@@ -108,3 +110,6 @@ async function handleFileImport(input) {
     input.value = '';
 }
 </script>
+
+{# Tabbar OOB swap - must be OUTSIDE the component #}
+{% include "ui/includes/tabbar_oob.html" %}
