@@ -1448,6 +1448,153 @@ def import_categories_csv(request):
         return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=500)
 
 
+# =============================================================================
+# Role Permissions API (HTMX)
+# =============================================================================
+
+
+def _get_roles_data_for_template(hub_id: str, module_id: str) -> list:
+    """
+    Helper function to get roles data for template rendering.
+    Used by settings_roles_section and toggle endpoints.
+    """
+    from apps.accounts.models import Role
+    from apps.core.services.permission_service import PermissionService
+
+    # Get all active roles
+    roles = Role.objects.filter(
+        hub_id=hub_id,
+        is_deleted=False,
+        is_active=True
+    ).order_by('-is_system', 'name')
+
+    roles_data = []
+    for role in roles:
+        perm_data = PermissionService.get_role_permissions_for_module(
+            hub_id=hub_id,
+            role_id=str(role.id),
+            module_id=module_id
+        )
+        roles_data.append({
+            'id': str(role.id),
+            'name': role.name,
+            'display_name': role.display_name,
+            'is_system': role.is_system,
+            'is_admin': role.name == 'admin',
+            'permissions': perm_data['permissions'],
+            'active_codenames': perm_data['active_codenames'],
+            'has_wildcard': perm_data['has_wildcard'],
+            'active_count': perm_data['active_count'],
+            'total_count': perm_data['total_count'],
+        })
+
+    return roles_data
+
+
+@login_required
+@require_http_methods(["GET"])
+def settings_roles_section(request):
+    """
+    Render the Role Permissions section for Settings page.
+    Called via HTMX on page load.
+    """
+    from apps.configuration.models import HubConfig
+
+    hub_id = str(HubConfig.get_value('hub_id', ''))
+    module_id = 'inventory'
+
+    roles_data = _get_roles_data_for_template(hub_id, module_id)
+
+    return render(request, 'inventory/partials/settings_roles_section.html', {
+        'roles': roles_data,
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_roles_list(request):
+    """
+    Get all roles with their permissions for this module (JSON).
+    Legacy endpoint - kept for backwards compatibility.
+    """
+    from apps.configuration.models import HubConfig
+
+    hub_id = str(HubConfig.get_value('hub_id', ''))
+    module_id = 'inventory'
+
+    roles_data = _get_roles_data_for_template(hub_id, module_id)
+
+    # Convert sets to lists for JSON serialization
+    for role in roles_data:
+        role['active_codenames'] = list(role['active_codenames'])
+
+    return JsonResponse({
+        'success': True,
+        'roles': roles_data,
+        'module_id': module_id,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_toggle_permission(request, role_id, codename):
+    """
+    Toggle a specific permission for a role in this module.
+    Returns updated HTML partial for HTMX swap.
+    """
+    from apps.core.services.permission_service import PermissionService
+    from apps.configuration.models import HubConfig
+
+    hub_id = str(HubConfig.get_value('hub_id', ''))
+    module_id = 'inventory'
+
+    try:
+        PermissionService.toggle_role_permission(
+            hub_id=hub_id,
+            role_id=role_id,
+            codename=codename
+        )
+
+        # Return updated HTML for HTMX swap
+        roles_data = _get_roles_data_for_template(hub_id, module_id)
+        return render(request, 'inventory/partials/settings_roles_section.html', {
+            'roles': roles_data,
+        })
+
+    except Exception as e:
+        return HttpResponse(f'<div class="text-danger p-md">{str(e)}</div>', status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_toggle_module_wildcard(request, role_id):
+    """
+    Toggle the module.* wildcard for a role.
+    Returns updated HTML partial for HTMX swap.
+    """
+    from apps.core.services.permission_service import PermissionService
+    from apps.configuration.models import HubConfig
+
+    hub_id = str(HubConfig.get_value('hub_id', ''))
+    module_id = 'inventory'
+
+    try:
+        PermissionService.toggle_role_module_wildcard(
+            hub_id=hub_id,
+            role_id=role_id,
+            module_id=module_id
+        )
+
+        # Return updated HTML for HTMX swap
+        roles_data = _get_roles_data_for_template(hub_id, module_id)
+        return render(request, 'inventory/partials/settings_roles_section.html', {
+            'roles': roles_data,
+        })
+
+    except Exception as e:
+        return HttpResponse(f'<div class="text-danger p-md">{str(e)}</div>', status=400)
+
+
 @login_required
 @require_http_methods(["POST"])
 def import_categories_excel(request):

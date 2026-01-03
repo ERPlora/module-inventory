@@ -84,13 +84,33 @@ SETTINGS = {
 }
 
 # Permissions
+# Format: (action_suffix, display_name) -> becomes "inventory.action_suffix"
 PERMISSIONS = [
-    "inventory.view_product",
-    "inventory.add_product",
-    "inventory.change_product",
-    "inventory.delete_product",
-    "inventory.view_category",
-    "inventory.add_category",
-    "inventory.change_category",
-    "inventory.delete_category",
+    ("view_product", _("Can view products")),
+    ("add_product", _("Can add products")),
+    ("change_product", _("Can edit products")),
+    ("delete_product", _("Can delete products")),
+    ("view_category", _("Can view categories")),
+    ("add_category", _("Can add categories")),
+    ("change_category", _("Can edit categories")),
+    ("delete_category", _("Can delete categories")),
 ]
+
+# Role Permissions - Default permissions for each system role in this module
+# Keys are role names, values are lists of permission suffixes (without module prefix)
+# Use ["*"] to grant all permissions in this module
+ROLE_PERMISSIONS = {
+    "admin": ["*"],  # Full access to all inventory permissions
+    "manager": [
+        "view_product",
+        "add_product",
+        "change_product",
+        "view_category",
+        "add_category",
+        "change_category",
+    ],
+    "employee": [
+        "view_product",
+        "view_category",
+    ],
+}

@@ -34,6 +34,22 @@
                 checked=config.barcode_enabled
                 hx_post="/m/inventory/settings/toggle/" %}{% endcomponent %}
         {% endcomponent %}
+
+        {# Role Permissions Section - HTMX powered #}
+        {% component "setting_section" title=_("Role Permissions") %}
+            <p class="fs-sm text-medium mb-md">{% trans "Configure what each role can do in this module." %}</p>
+
+            {# Content loaded via HTMX on page load #}
+            <div id="role-permissions-section"
+                 hx-get="/m/inventory/settings/roles/"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+                {# Loading spinner while content loads #}
+                <div class="d-flex justify-center p-lg">
+                    <ion-spinner name="crescent"></ion-spinner>
+                </div>
+            </div>
+        {% endcomponent %}
     {% endfill %}
 
     {% fill "actions" %}

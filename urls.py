@@ -38,4 +38,10 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('settings/toggle/', views.settings_toggle, name='settings_toggle'),
     path('settings/reset/', views.settings_reset, name='settings_reset'),
+    path('settings/roles/', views.settings_roles_section, name='settings_roles_section'),
+
+    # Role Permissions API
+    path('api/roles/', views.api_roles_list, name='api_roles_list'),
+    path('api/roles/<uuid:role_id>/toggle/<str:codename>/', views.api_toggle_permission, name='api_toggle_permission'),
+    path('api/roles/<uuid:role_id>/toggle-wildcard/', views.api_toggle_module_wildcard, name='api_toggle_module_wildcard'),
 ]

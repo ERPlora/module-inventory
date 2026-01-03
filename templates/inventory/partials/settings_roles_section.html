@@ -1,0 +1,69 @@
+{% load i18n %}
+
+{# Server-side rendered role permissions section - HTMX powered #}
+<ion-accordion-group>
+    {% for role in roles %}
+    <ion-accordion value="{{ role.id }}">
+        <ion-item slot="header" color="light">
+            {# Role toggle checkbox (not for admin) #}
+            {% if not role.is_admin %}
+            <ion-checkbox
+                slot="start"
+                {% if role.has_wildcard or role.active_count == role.total_count %}checked{% endif %}
+                {% if not role.has_wildcard and role.active_count > 0 and role.active_count < role.total_count %}indeterminate{% endif %}
+                hx-post="/m/inventory/api/roles/{{ role.id }}/toggle-wildcard/"
+                hx-target="#role-permissions-section"
+                hx-swap="innerHTML"
+                hx-include="[name='csrfmiddlewaretoken']"
+                onclick="event.stopPropagation()"
+            ></ion-checkbox>
+            {% else %}
+            <ion-checkbox slot="start" checked disabled></ion-checkbox>
+            {% endif %}
+
+            <ion-label>
+                <h2 class="fw-semibold">{{ role.display_name }}</h2>
+                <p class="fs-sm text-medium">
+                    {% if role.has_wildcard or role.is_admin %}
+                    <ion-chip color="primary" style="height: 20px; font-size: 11px;">
+                        <ion-label>{% trans "Full Access" %}</ion-label>
+                    </ion-chip>
+                    {% else %}
+                    {{ role.active_count }}/{{ role.total_count }} {% trans "permissions" %}
+                    {% endif %}
+                </p>
+            </ion-label>
+        </ion-item>
+
+        <div slot="content" class="ion-padding">
+            <ion-list>
+                {% for perm in role.permissions %}
+                <ion-item lines="none">
+                    {% if not role.is_admin %}
+                    <ion-checkbox
+                        slot="start"
+                        {% if perm.codename in role.active_codenames %}checked{% endif %}
+                        hx-post="/m/inventory/api/roles/{{ role.id }}/toggle/{{ perm.codename }}/"
+                        hx-target="#role-permissions-section"
+                        hx-swap="innerHTML"
+                        hx-include="[name='csrfmiddlewaretoken']"
+                    ></ion-checkbox>
+                    {% else %}
+                    <ion-checkbox slot="start" checked disabled></ion-checkbox>
+                    {% endif %}
+                    <ion-label>
+                        <h3>{{ perm.name }}</h3>
+                        <p class="fs-xs text-medium">{{ perm.codename }}</p>
+                    </ion-label>
+                </ion-item>
+                {% endfor %}
+            </ion-list>
+        </div>
+    </ion-accordion>
+    {% empty %}
+    <div class="text-center p-lg text-medium">
+        <ion-icon name="people-outline" style="font-size: 48px;"></ion-icon>
+        <p class="mt-sm">{% trans "No roles found. Please sync permissions first." %}</p>
+    </div>
+    {% endfor %}
+</ion-accordion-group>
