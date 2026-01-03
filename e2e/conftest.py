@@ -2,6 +2,7 @@
 Playwright E2E test fixtures for inventory module.
 
 This conftest provides common fixtures for all E2E tests in the inventory module.
+All tests require authentication via PIN (1234) using the 'support' user.
 """
 import pytest
 from playwright.sync_api import Page, expect
@@ -9,6 +10,10 @@ from playwright.sync_api import Page, expect
 
 # Base URL for tests (Hub running locally)
 BASE_URL = "http://localhost:8001"
+
+# Default test user and PIN
+TEST_USER = "support"
+TEST_PIN = "1234"
 
 
 @pytest.fixture(scope="session")
@@ -21,36 +26,52 @@ def browser_context_args(browser_context_args):
     }
 
 
+def login_with_pin(page: Page, username: str = TEST_USER, pin: str = TEST_PIN) -> None:
+    """
+    Login to the Hub using PIN authentication with the 'support' user.
+
+    This function:
+    1. Navigates to the Hub
+    2. Selects the 'support' employee card
+    3. Enters the PIN via the keypad
+    """
+    page.goto(f"{BASE_URL}/")
+    page.wait_for_load_state("networkidle")
+
+    # Check if we're on login page
+    if "/login" in page.url or page.locator(".login-container").count() > 0:
+        # Wait for employees to load
+        page.wait_for_selector(".employee-card", timeout=5000)
+
+        # Click on the 'support' employee card (by name text)
+        support_card = page.locator(f'.employee-card:has-text("{username}")')
+        if support_card.count() > 0:
+            support_card.first.click()
+        else:
+            # Fallback to first employee if 'support' not found
+            page.locator(".employee-card").first.click()
+
+        # Wait for PIN keypad to appear
+        page.wait_for_selector(".keypad", timeout=3000)
+
+        # Enter PIN digits via keypad buttons
+        for digit in pin:
+            page.click(f'.keypad ion-button:has-text("{digit}")')
+            page.wait_for_timeout(100)  # Small delay between digits
+
+        # Wait for navigation after successful PIN
+        page.wait_for_url(f"{BASE_URL}/", timeout=5000)
+        page.wait_for_load_state("networkidle")
+
+
 @pytest.fixture
 def authenticated_page(page: Page) -> Page:
     """
-    Create an authenticated page by logging in.
+    Create an authenticated page by logging in with PIN.
 
-    This fixture:
-    1. Navigates to the Hub
-    2. Logs in with test credentials
-    3. Sets up PIN if needed
-    4. Returns the authenticated page
+    Returns the authenticated page ready for use.
     """
-    # Navigate to Hub
-    page.goto(f"{BASE_URL}/")
-
-    # Wait for redirect to login or main page
-    page.wait_for_load_state("networkidle")
-
-    # Check if we need to log in
-    if "/login" in page.url or "/cloud-login" in page.url:
-        # For local development, we may have a PIN-only flow
-        # This will need customization based on your auth setup
-        pass
-
-    # If we're on PIN verification page
-    if "/verify-pin" in page.url:
-        # Enter PIN (adjust selector based on your UI)
-        page.fill('input[type="password"]', '1234')
-        page.click('button[type="submit"]')
-        page.wait_for_load_state("networkidle")
-
+    login_with_pin(page)
     return page
 
 
@@ -74,5 +95,21 @@ def products_page(authenticated_page: Page) -> Page:
 def categories_page(authenticated_page: Page) -> Page:
     """Navigate to categories page."""
     authenticated_page.goto(f"{BASE_URL}/m/inventory/categories/")
+    authenticated_page.wait_for_load_state("networkidle")
+    return authenticated_page
+
+
+@pytest.fixture
+def reports_page(authenticated_page: Page) -> Page:
+    """Navigate to reports page."""
+    authenticated_page.goto(f"{BASE_URL}/m/inventory/reports/")
+    authenticated_page.wait_for_load_state("networkidle")
+    return authenticated_page
+
+
+@pytest.fixture
+def settings_page(authenticated_page: Page) -> Page:
+    """Navigate to settings page."""
+    authenticated_page.goto(f"{BASE_URL}/m/inventory/settings/")
     authenticated_page.wait_for_load_state("networkidle")
     return authenticated_page
