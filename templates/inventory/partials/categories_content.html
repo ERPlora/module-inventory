@@ -1,186 +1,305 @@
-{% load static %}
-{% load i18n %}
+{% load i18n djicons %}
 
-{% if request.htmx %}
-<!-- Tab bar update via OOB swap (only on HTMX navigation) -->
-<div id="dashboard-tabbar" hx-swap-oob="innerHTML">
-<ion-footer>
-{% include "inventory/partials/tabbar.html" %}
-</ion-footer>
-</div>
-{% endif %}
+<div x-data="{
+    view: '{{ current_view|default:'table' }}',
+    panelOpen: false,
+    selectedIds: [],
+    selectAll: false,
+    editUrl: '',
+    deleteConfirm: false,
+    deleteTarget: null,
+    importModal: false,
+    columnsModal: false,
+    cols: { description: true, icon: true, order: true, status: true },
+    toggleCol(col) {
+        this.cols[col] = !this.cols[col];
+        document.querySelectorAll('[data-col=' + col + ']').forEach(el => el.classList.toggle('hidden', !this.cols[col]));
+    },
+    toggleSelect(id) {
+        const idx = this.selectedIds.indexOf(id);
+        if (idx > -1) this.selectedIds.splice(idx, 1);
+        else this.selectedIds.push(id);
+        this.selectAll = false;
+    },
+    toggleAll(ids) {
+        if (this.selectAll) this.selectedIds = [];
+        else this.selectedIds = [...ids];
+        this.selectAll = !this.selectAll;
+    },
+    clearSelection() { this.selectedIds = []; this.selectAll = false; },
+    openPanel(url) {
+        this.editUrl = url;
+        htmx.ajax('GET', url, { target: '#category-panel-content', swap: 'innerHTML' });
+        this.panelOpen = true;
+    },
+    closePanel() {
+        this.panelOpen = false;
+    },
+    confirmDelete() {
+        if (this.deleteTarget) {
+            htmx.ajax('POST', this.deleteTarget.url, {
+                target: '#datatable-body',
+                swap: 'innerHTML',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}' }
+            });
+        }
+        this.deleteConfirm = false;
+        this.deleteTarget = null;
+    }
+}">
 
-<div class="ion-padding">
-    <ion-card class="m-0">
-        <ion-card-header>
-            <ion-card-title>{% trans "Categories" %}</ion-card-title>
-        </ion-card-header>
+    <div class="datatable glass mt-5" id="categories-datatable">
 
-        <ion-card-content>
-            <!-- Search Bar and Action Buttons -->
-            <div class="flex flex-col md:flex-row gap-3 mb-4">
-                <!-- Search Bar -->
-                <div class="relative flex-1">
-                    <ion-icon
-                        name="search-outline"
-                        class="absolute left-3 top-1/2 -translate-y-1/2"
-                        style="color: var(--ion-color-medium); pointer-events: none; z-index: 10;">
-                    </ion-icon>
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ request.GET.search|default:'' }}"
-                        placeholder="{% trans 'Search categories...' %}"
-                        class="w-full h-10 pl-10 pr-3 rounded-lg"
-                        style="border: 1px solid var(--ion-border-color); background: var(--ion-background-color); color: var(--ion-text-color);"
+        <!-- Toolbar -->
+        <div class="datatable-toolbar">
+            <div class="datatable-toolbar-start">
+                <label class="input input-sm datatable-search">
+                    {% icon "search-outline" %}
+                    <input type="search"
+                           name="q"
+                           placeholder="{% trans 'Search categories...' %}"
+                           value="{{ search_query|default:'' }}"
+                           autocomplete="off"
+                           hx-get="{% url 'inventory:categories_index' %}"
+                           hx-target="#datatable-body"
+                           hx-include="#categories-datatable"
+                           hx-trigger="input changed delay:300ms, search">
+                </label>
+                <select name="status"
+                        class="select select-sm"
                         hx-get="{% url 'inventory:categories_index' %}"
-                        hx-trigger="keyup changed delay:400ms"
-                        hx-target="#categories-table-container"
-                        hx-include="[name='page'],[name='order_by'],[name='per_page']"
-                        hx-push-url="true">
-                </div>
+                        hx-target="#datatable-body"
+                        hx-include="#categories-datatable"
+                        hx-trigger="change">
+                    <option value="">{% trans "All Status" %}</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{% trans "Active" %}</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>{% trans "Inactive" %}</option>
+                </select>
+            </div>
+            <div class="datatable-toolbar-end">
+                <!-- Add Category -->
+                <button class="btn btn-sm btn-circle color-primary"
+                        @click="openPanel('{% url 'inventory:category_add' %}')"
+                        title="{% trans 'Add Category' %}">
+                    {% icon "add-outline" %}
+                </button>
 
-                <!-- Action Buttons -->
-                <div class="flex gap-2">
-                    <ion-button size="default" fill="outline" onclick="document.getElementById('importCategoryFileInput').click()" title="{% trans 'Import CSV/Excel' %}">
-                        <ion-icon slot="icon-only" name="cloud-upload-outline"></ion-icon>
-                    </ion-button>
-                    <input type="file" id="importCategoryFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="handleCategoryFileImport(this)">
-                    <ion-button size="default" fill="outline" href="{% url 'inventory:export_categories_csv' %}" title="{% trans 'Export to CSV' %}">
-                        <ion-icon slot="icon-only" name="download-outline"></ion-icon>
-                    </ion-button>
-                    <ion-button size="default" href="{% url 'inventory:category_create' %}" title="{% trans 'New Category' %}">
-                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
-                    </ion-button>
+                <!-- Column Visibility -->
+                <button class="datatable-column-btn" @click="columnsModal = true" title="{% trans 'Columns' %}">
+                    {% icon "options-outline" %}
+                </button>
+
+                <!-- Export -->
+                <details class="dropdown" x-data="{ open: false }" :open="open" @click.outside="open = false">
+                    <summary class="datatable-export-btn" @click.prevent="open = !open" title="{% trans 'Export' %}">
+                        {% icon "download-outline" %}
+                    </summary>
+                    <div class="dropdown-menu dropdown-menu-right">
+                        <a class="dropdown-item" href="#"
+                           @click.prevent="open = false; window.location.href = '{% url 'inventory:categories_index' %}?export=csv&' + new URLSearchParams({q: document.querySelector('[name=q]')?.value || '', status: document.querySelector('[name=status]')?.value || ''}).toString()">
+                            {% icon "document-text-outline" %}
+                            {% trans "Export as CSV" %}
+                        </a>
+                        <a class="dropdown-item" href="#"
+                           @click.prevent="open = false; window.location.href = '{% url 'inventory:categories_index' %}?export=excel&' + new URLSearchParams({q: document.querySelector('[name=q]')?.value || '', status: document.querySelector('[name=status]')?.value || ''}).toString()">
+                            {% icon "document-text-outline" %}
+                            {% trans "Export as Excel" %}
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" onclick="window.print();">
+                            {% icon "print-outline" %}
+                            {% trans "Print" %}
+                        </button>
+                    </div>
+                </details>
+
+                <!-- Import -->
+                <button class="datatable-export-btn" @click="importModal = true" title="{% trans 'Import' %}">
+                    {% icon "cloud-upload-outline" %}
+                </button>
+
+                <!-- View Toggle -->
+                <div class="datatable-view-toggle">
+                    <button type="button"
+                            class="datatable-view-btn"
+                            :class="{ 'datatable-view-btn-active': view === 'table' }"
+                            @click="view = 'table'"
+                            hx-get="{% url 'inventory:categories_index' %}"
+                            hx-target="#datatable-body"
+                            hx-include="#categories-datatable"
+                            hx-vals='{"view": "table"}'
+                            title="{% trans 'Table view' %}">
+                        {% icon "list-outline" %}
+                    </button>
+                    <button type="button"
+                            class="datatable-view-btn"
+                            :class="{ 'datatable-view-btn-active': view === 'cards' }"
+                            @click="view = 'cards'"
+                            hx-get="{% url 'inventory:categories_index' %}"
+                            hx-target="#datatable-body"
+                            hx-include="#categories-datatable"
+                            hx-vals='{"view": "cards"}'
+                            title="{% trans 'Card view' %}">
+                        {% icon "grid-outline" %}
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Table Container (HTMX updates this) -->
-            <div id="categories-table-container">
-                {% include "inventory/partials/categories_table_partial.html" %}
+        <!-- Bulk Actions Bar -->
+        <div class="datatable-bulk" x-show="selectedIds.length > 0" x-cloak>
+            <div class="datatable-bulk-info">
+                <span class="datatable-bulk-count" x-text="selectedIds.length"></span>
+                <span>{% trans "selected" %}</span>
             </div>
-        </ion-card-content>
-    </ion-card>
+            <div class="datatable-bulk-actions">
+                <button class="datatable-bulk-btn"
+                        hx-post="{% url 'inventory:categories_bulk_action' %}"
+                        hx-target="#datatable-body"
+                        hx-include="#categories-datatable"
+                        :hx-vals="JSON.stringify({ids: selectedIds.join(','), action: 'activate'})"
+                        @htmx:after-request="clearSelection()">
+                    {% icon "checkmark-circle-outline" %}
+                    {% trans "Activate" %}
+                </button>
+                <button class="datatable-bulk-btn"
+                        hx-post="{% url 'inventory:categories_bulk_action' %}"
+                        hx-target="#datatable-body"
+                        hx-include="#categories-datatable"
+                        :hx-vals="JSON.stringify({ids: selectedIds.join(','), action: 'deactivate'})"
+                        @htmx:after-request="clearSelection()">
+                    {% icon "close-circle-outline" %}
+                    {% trans "Deactivate" %}
+                </button>
+                <button class="datatable-bulk-btn datatable-bulk-btn-danger"
+                        hx-post="{% url 'inventory:categories_bulk_action' %}"
+                        hx-target="#datatable-body"
+                        hx-include="#categories-datatable"
+                        :hx-vals="JSON.stringify({ids: selectedIds.join(','), action: 'delete'})"
+                        @htmx:after-request="clearSelection()">
+                    {% icon "trash-outline" %}
+                    {% trans "Delete" %}
+                </button>
+                <button class="datatable-bulk-clear" @click="clearSelection()" title="{% trans 'Clear selection' %}">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+        </div>
+
+        {% csrf_token %}
+
+        <!-- Hidden state inputs -->
+        <input type="hidden" name="sort" value="{{ sort_field|default:'sort_order' }}">
+        <input type="hidden" name="dir" value="{{ sort_dir|default:'asc' }}">
+        <input type="hidden" name="view" :value="view">
+        <input type="hidden" name="per_page" value="{{ per_page|default:'10' }}">
+
+        <!-- Datatable Body (HTMX swap target) -->
+        <div id="datatable-body">
+            {% include "inventory/partials/categories_list.html" %}
+        </div>
+    </div>
+
+    <!-- Side Sheet -->
+    <div class="sheet-backdrop" :class="{ 'is-open': panelOpen }" @click.self="closePanel()">
+        <div class="side-sheet side-sheet-right" id="category-panel-content">
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-backdrop" :data-state="deleteConfirm ? 'open' : 'closed'" @click.self="deleteConfirm = false; deleteTarget = null">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">{% trans "Delete Category" %}</h3>
+                <button class="modal-close" @click="deleteConfirm = false; deleteTarget = null">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm text-base-content/70">
+                    {% trans "Are you sure you want to delete" %} <strong x-text="deleteTarget?.name"></strong>?
+                    {% trans "This action cannot be undone." %}
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost btn-sm" @click="deleteConfirm = false; deleteTarget = null">
+                    {% trans "Cancel" %}
+                </button>
+                <button class="btn btn-sm color-error" @click="confirmDelete()">
+                    {% icon "trash-outline" %}
+                    {% trans "Delete" %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-backdrop" :data-state="importModal ? 'open' : 'closed'" @click.self="importModal = false">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">{% trans "Import Categories" %}</h3>
+                <button class="modal-close" @click="importModal = false">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+            <form hx-post="{% url 'inventory:categories_import' %}"
+                  hx-target="#datatable-body"
+                  hx-encoding="multipart/form-data"
+                  @htmx:after-request="importModal = false">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-sm text-base-content/70 mb-4">
+                        {% trans "Upload a CSV or Excel file with columns:" %}
+                        <strong>Name, Description, Icon, Color, Order</strong>
+                    </p>
+                    <input type="file" name="file" accept=".csv,.xlsx,.xls" class="input" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost btn-sm" @click="importModal = false">
+                        {% trans "Cancel" %}
+                    </button>
+                    <button type="submit" class="btn btn-sm color-primary">
+                        {% icon "cloud-upload-outline" %}
+                        {% trans "Import" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Columns Modal -->
+    <div class="modal-backdrop" :data-state="columnsModal ? 'open' : 'closed'" @click.self="columnsModal = false">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">{% trans "Show / Hide Columns" %}</h3>
+                <button class="modal-close" @click="columnsModal = false">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+            <div class="modal-body">
+                <label class="flex items-center gap-3 py-2 cursor-not-allowed opacity-50">
+                    <input type="checkbox" class="checkbox checkbox-sm" checked disabled>
+                    <span class="text-sm">{% trans "Category" %}</span>
+                </label>
+                <label class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleCol('description')">
+                    <input type="checkbox" class="checkbox checkbox-sm" :checked="cols.description" readonly>
+                    <span class="text-sm">{% trans "Description" %}</span>
+                </label>
+                <label class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleCol('order')">
+                    <input type="checkbox" class="checkbox checkbox-sm" :checked="cols.order" readonly>
+                    <span class="text-sm">{% trans "Order" %}</span>
+                </label>
+                <label class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleCol('status')">
+                    <input type="checkbox" class="checkbox checkbox-sm" :checked="cols.status" readonly>
+                    <span class="text-sm">{% trans "Status" %}</span>
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm color-primary" @click="columnsModal = false">
+                    {% trans "Done" %}
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
-
-<script>
-async function confirmDeleteCategory(categoryId, categoryName, buttonElement) {
-    const alert = document.createElement('ion-alert');
-    alert.header = '{% trans "Confirm Delete" %}';
-    alert.message = `{% trans "Are you sure you want to delete category" %} "${categoryName}"?`;
-    alert.buttons = [
-        {
-            text: '{% trans "Cancel" %}',
-            role: 'cancel',
-            cssClass: 'secondary'
-        },
-        {
-            text: '{% trans "Delete" %}',
-            role: 'confirm',
-            cssClass: 'danger',
-            handler: () => {
-                const row = buttonElement.closest('tr');
-                fetch(`/modules/inventory/categories/delete/${categoryId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCsrfToken(),
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        row.style.transition = 'opacity 0.5s';
-                        row.style.opacity = '0';
-                        setTimeout(() => row.remove(), 500);
-                        showToast('{% trans "Category deleted successfully" %}', 'success');
-                    } else {
-                        showToast(data.message || '{% trans "Error deleting category" %}', 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Delete error:', error);
-                    showToast('{% trans "Error deleting category" %}', 'danger');
-                });
-            }
-        }
-    ];
-
-    document.body.appendChild(alert);
-    await alert.present();
-}
-
-async function showToast(message, color = 'primary') {
-    const toast = document.createElement('ion-toast');
-    toast.message = message;
-    toast.duration = 2000;
-    toast.color = color;
-    toast.position = 'top';
-    document.body.appendChild(toast);
-    await toast.present();
-}
-
-async function handleCategoryFileImport(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const fileName = file.name.toLowerCase();
-    let importUrl;
-    if (fileName.endsWith('.csv')) {
-        importUrl = '/modules/inventory/categories/import/csv/';
-    } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        importUrl = '/modules/inventory/categories/import/excel/';
-    } else {
-        await showToast('{% trans "Invalid file format. Use CSV or Excel" %}', 'danger');
-        input.value = '';
-        return;
-    }
-
-    const loadingToast = document.createElement('ion-toast');
-    loadingToast.message = '{% trans "Importing categories..." %}';
-    loadingToast.duration = 0;
-    loadingToast.position = 'top';
-    document.body.appendChild(loadingToast);
-    await loadingToast.present();
-
-    try {
-        const response = await fetch(importUrl, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': getCsrfToken(),
-            }
-        });
-
-        const result = await response.json();
-        await loadingToast.dismiss();
-
-        if (response.ok) {
-            await showToast(result.message || '{% trans "Categories imported successfully" %}', 'success');
-            window.location.reload();
-        } else {
-            await showToast(result.error || '{% trans "Error importing categories" %}', 'danger');
-        }
-    } catch (error) {
-        await loadingToast.dismiss();
-        console.error('Import error:', error);
-        await showToast('{% trans "Error importing categories" %}', 'danger');
-    }
-
-    input.value = '';
-}
-
-function getCsrfToken() {
-    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfInput) return csrfInput.value;
-
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrftoken') return value;
-    }
-    return '';
-}
-</script>

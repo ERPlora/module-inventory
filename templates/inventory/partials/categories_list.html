@@ -1,0 +1,219 @@
+{% load i18n djicons %}
+
+{% if categories %}
+
+{% if current_view == 'cards' %}
+<!-- Card View -->
+<div class="datatable-body">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {% for category in categories %}
+        <div class="card glass cursor-pointer hover:shadow-lg transition-shadow"
+             @click="openPanel('{% url 'inventory:category_edit' category.id %}')">
+            <div class="card-body">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                         style="background-color: {{ category.color }}20; color: {{ category.color }};">
+                        {% icon category.icon %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-semibold text-sm truncate">{{ category.name }}</h3>
+                        <span class="text-xs text-base-content/50">{{ category.product_count }} {% trans "products" %}</span>
+                    </div>
+                    {% if category.is_active %}
+                    <span class="badge badge-sm color-success">{% trans "Active" %}</span>
+                    {% else %}
+                    <span class="badge badge-sm">{% trans "Inactive" %}</span>
+                    {% endif %}
+                </div>
+                {% if category.description %}
+                <p class="text-xs text-base-content/60 mt-2 line-clamp-2">{{ category.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<!-- Table View (default) -->
+<div class="datatable-body">
+    <table class="datatable-table">
+        <thead class="datatable-thead">
+            <tr>
+                <th class="datatable-th datatable-th-checkbox">
+                    <label class="checkbox checkbox-sm">
+                        <input type="checkbox"
+                               :checked="selectAll"
+                               @click="toggleAll([{% for category in categories %}'{{ category.id }}'{% if not forloop.last %},{% endif %}{% endfor %}])">
+                        <span class="checkbox-mark"></span>
+                    </label>
+                </th>
+                <th class="datatable-th datatable-th-sortable{% if sort_field == 'name' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                    hx-get="{% url 'inventory:categories_index' %}?sort=name&dir={% if sort_field == 'name' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                    hx-target="#datatable-body"
+                    hx-include="#categories-datatable"
+                    style="cursor: pointer;">
+                    {% trans "Category" %}
+                    <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
+                </th>
+                <th class="datatable-th" data-col="description">{% trans "Description" %}</th>
+                <th class="datatable-th datatable-th-sortable{% if sort_field == 'sort_order' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                    data-col="order"
+                    hx-get="{% url 'inventory:categories_index' %}?sort=sort_order&dir={% if sort_field == 'sort_order' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                    hx-target="#datatable-body"
+                    hx-include="#categories-datatable"
+                    style="cursor: pointer;">
+                    {% trans "Order" %}
+                    <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
+                </th>
+                <th class="datatable-th datatable-th-center" data-col="status">{% trans "Status" %}</th>
+                <th class="datatable-th datatable-th-actions">{% trans "Actions" %}</th>
+            </tr>
+        </thead>
+        <tbody class="datatable-tbody">
+            {% for category in categories %}
+            <tr class="datatable-tr"
+                data-id="{{ category.id }}"
+                :class="{ 'datatable-tr-selected': selectedIds.includes('{{ category.id }}') }">
+                <td class="datatable-td datatable-td-checkbox" onclick="event.stopPropagation();">
+                    <label class="checkbox checkbox-sm">
+                        <input type="checkbox"
+                               :checked="selectedIds.includes('{{ category.id }}')"
+                               @click="toggleSelect('{{ category.id }}')">
+                        <span class="checkbox-mark"></span>
+                    </label>
+                </td>
+                <td class="datatable-td" data-label="{% trans 'Category' %}">
+                    <div class="flex items-center gap-3 cursor-pointer"
+                         @click="openPanel('{% url 'inventory:category_edit' category.id %}')">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
+                             style="background-color: {{ category.color }}20; color: {{ category.color }};">
+                            {% icon category.icon %}
+                        </div>
+                        <div>
+                            <span class="font-medium">{{ category.name }}</span>
+                            <span class="text-xs text-base-content/50 block">{{ category.product_count }} {% trans "products" %}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="datatable-td" data-col="description" data-label="{% trans 'Description' %}">
+                    <span class="text-base-content/60 text-sm">{{ category.description|truncatewords:10 }}</span>
+                </td>
+                <td class="datatable-td" data-col="order" data-label="{% trans 'Order' %}">
+                    <span class="badge badge-ghost badge-sm">{{ category.sort_order }}</span>
+                </td>
+                <td class="datatable-td datatable-td-center" data-col="status" data-label="{% trans 'Status' %}" onclick="event.stopPropagation();">
+                    <label class="toggle toggle-sm color-success">
+                        <input type="checkbox"
+                               {% if category.is_active %}checked{% endif %}
+                               hx-post="{% url 'inventory:category_toggle_status' category.id %}"
+                               hx-target="#datatable-body"
+                               hx-include="#categories-datatable">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </td>
+                <td class="datatable-td datatable-td-actions" onclick="event.stopPropagation();">
+                    <div class="datatable-row-actions">
+                        <button class="datatable-row-action"
+                                @click="openPanel('{% url 'inventory:category_edit' category.id %}')"
+                                title="{% trans 'Edit' %}">
+                            {% icon "create-outline" %}
+                        </button>
+                        <button class="datatable-row-action datatable-row-action-danger"
+                                @click="deleteTarget = { id: '{{ category.id }}', name: '{{ category.name }}', url: '{% url 'inventory:category_delete' category.id %}' }; deleteConfirm = true"
+                                title="{% trans 'Delete' %}">
+                            {% icon "trash-outline" %}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Footer / Pagination -->
+<div class="datatable-footer">
+    <div class="datatable-per-page">
+        {% trans "Show" %}
+        <select name="per_page"
+                hx-get="{% url 'inventory:categories_index' %}"
+                hx-target="#datatable-body"
+                hx-include="#categories-datatable"
+                hx-trigger="change">
+            <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+        {% trans "per page" %}
+    </div>
+    <span class="datatable-info">
+        {% if page_obj.paginator.count > 0 %}
+        {% blocktrans with start=page_obj.start_index end=page_obj.end_index total=page_obj.paginator.count %}Showing {{ start }}-{{ end }} of {{ total }} categories{% endblocktrans %}
+        {% endif %}
+    </span>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination pagination-sm">
+        <button class="pagination-btn pagination-prev"
+                {% if page_obj.has_previous %}
+                hx-get="{% url 'inventory:categories_index' %}?page={{ page_obj.previous_page_number }}"
+                hx-target="#datatable-body"
+                hx-include="#categories-datatable"
+                {% else %}disabled{% endif %}>
+            {% icon "chevron-back-outline" %}
+        </button>
+        {% for num in page_obj.paginator.page_range %}
+        <button class="pagination-btn{% if num == page_obj.number %} pagination-active{% endif %}"
+                hx-get="{% url 'inventory:categories_index' %}?page={{ num }}"
+                hx-target="#datatable-body"
+                hx-include="#categories-datatable">
+            {{ num }}
+        </button>
+        {% endfor %}
+        <button class="pagination-btn pagination-next"
+                {% if page_obj.has_next %}
+                hx-get="{% url 'inventory:categories_index' %}?page={{ page_obj.next_page_number }}"
+                hx-target="#datatable-body"
+                hx-include="#categories-datatable"
+                {% else %}disabled{% endif %}>
+            {% icon "chevron-forward-outline" %}
+        </button>
+    </nav>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="datatable-empty">
+    <div class="datatable-empty-icon">
+        {% if search_query or status_filter %}
+        {% icon "search-outline" %}
+        {% else %}
+        {% icon "pricetags-outline" %}
+        {% endif %}
+    </div>
+    <div class="datatable-empty-title">
+        {% if search_query or status_filter %}
+        {% trans "No categories found" %}
+        {% else %}
+        {% trans "No categories yet" %}
+        {% endif %}
+    </div>
+    <div class="datatable-empty-text">
+        {% if search_query or status_filter %}
+        {% trans "Try a different search term or filter" %}
+        {% else %}
+        {% trans "Add your first category to organize products" %}
+        {% endif %}
+    </div>
+    {% if not search_query and not status_filter %}
+    <button class="btn color-primary mt-4"
+            @click="openPanel('{% url 'inventory:category_add' %}')">
+        {% icon "add-outline" %}
+        {% trans "Add First Category" %}
+    </button>
+    {% endif %}
+</div>
+{% endif %}

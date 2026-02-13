@@ -1,109 +1,100 @@
-import os
-from django.db import models
-from django.core.validators import MinValueValidator
 from decimal import Decimal
 
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
 
-class ProductsConfig(models.Model):
-    """
-    Configuration for Products Plugin.
-    Singleton model (only one instance with id=1).
-    """
-    # Inventory Settings
+from apps.core.models import HubBaseModel
+
+
+# --- Settings ---
+
+class InventorySettings(HubBaseModel):
+    """Per-hub inventory settings."""
+
     allow_negative_stock = models.BooleanField(
+        _('Allow Negative Stock'),
         default=False,
-        help_text='Allow products to have negative stock values (sell even when out of stock)'
+        help_text=_('Allow products to have negative stock values.'),
     )
-
     low_stock_alert_enabled = models.BooleanField(
+        _('Low Stock Alerts'),
         default=True,
-        help_text='Show alerts when products are low in stock'
+        help_text=_('Show alerts when products are low in stock.'),
     )
-
     auto_generate_sku = models.BooleanField(
+        _('Auto-generate SKU'),
         default=True,
-        help_text='Automatically generate SKU for new products'
+        help_text=_('Automatically generate SKU for new products.'),
     )
-
     barcode_enabled = models.BooleanField(
+        _('Barcode Enabled'),
         default=True,
-        help_text='Enable barcode generation and printing for products'
+        help_text=_('Enable barcode generation and printing for products.'),
     )
 
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        app_label = 'inventory'
-        db_table = 'inventory_config'
-        verbose_name = 'Inventory Configuration'
-        verbose_name_plural = 'Inventory Configuration'
+    class Meta(HubBaseModel.Meta):
+        db_table = 'inventory_settings'
+        verbose_name = _('Inventory Settings')
+        verbose_name_plural = _('Inventory Settings')
+        unique_together = [('hub_id',)]
 
     def __str__(self):
-        return "Products Configuration"
+        return str(_('Inventory Settings'))
 
     @classmethod
-    def get_config(cls):
-        """Get or create products configuration (singleton pattern)"""
-        config, _ = cls.objects.get_or_create(id=1)
-        return config
+    def get_settings(cls, hub_id):
+        """Get or create settings for a hub."""
+        settings, _ = cls.all_objects.get_or_create(hub_id=hub_id)
+        return settings
 
 
-class Category(models.Model):
-    """
-    Modelo de Categoría de Productos
-    Definido primero para poder referenciar en Product
-    """
-    name = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
-    slug = models.SlugField(max_length=100, unique=True, blank=True, verbose_name="Slug")
+# --- Catalogue ---
+
+class Category(HubBaseModel):
+    """Product category."""
+
+    name = models.CharField(_('Name'), max_length=100)
+    slug = models.SlugField(_('Slug'), max_length=100, blank=True)
     icon = models.CharField(
+        _('Icon'),
         max_length=50,
-        default="cube-outline",
-        verbose_name="Icono Ionic",
-        help_text="Nombre del icono de Ionicons (ej: cafe-outline, pizza-outline)"
+        default='cube-outline',
+        help_text=_('Icon name (e.g. cafe-outline, pizza-outline)'),
     )
     color = models.CharField(
+        _('Color'),
         max_length=7,
-        default="#3880ff",
-        verbose_name="Color",
-        help_text="Color en formato hexadecimal (ej: #3880ff)"
+        default='#3880ff',
+        help_text=_('Hex color (e.g. #3880ff)'),
     )
     image = models.ImageField(
+        _('Image'),
         upload_to='categories/',
         blank=True,
         null=True,
-        verbose_name="Imagen",
-        help_text="Imagen de la categoría (opcional)"
     )
-    description = models.TextField(blank=True, verbose_name="Descripción")
-    order = models.IntegerField(
-        default=0,
-        verbose_name="Orden",
-        help_text="Orden de visualización (menor número = primero)"
-    )
-    # Tax Class - default tax for products in this category
+    description = models.TextField(_('Description'), blank=True, default='')
     tax_class = models.ForeignKey(
         'configuration.TaxClass',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='categories',
-        verbose_name="Tax Class",
-        help_text="Default tax class for products in this category"
+        verbose_name=_('Tax Class'),
+        help_text=_('Default tax class for products in this category.'),
     )
-    is_active = models.BooleanField(default=True, verbose_name="Activa")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+    is_active = models.BooleanField(_('Active'), default=True)
+    sort_order = models.PositiveIntegerField(_('Sort Order'), default=0)
 
-    class Meta:
-        app_label = 'inventory'
+    class Meta(HubBaseModel.Meta):
         db_table = 'inventory_category'
-        verbose_name = "Categoría"
-        verbose_name_plural = "Categorías"
-        ordering = ['order', 'name']
+        verbose_name = _('Category')
+        verbose_name_plural = _('Categories')
+        ordering = ['sort_order', 'name']
         indexes = [
-            models.Index(fields=['order']),
+            models.Index(fields=['sort_order']),
             models.Index(fields=['is_active']),
         ]
 
@@ -111,301 +102,374 @@ class Category(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        """Auto-capitaliza el nombre y genera slug si no existe"""
-        # Capitalize el nombre automáticamente
         if self.name:
             self.name = self.name.strip().capitalize()
-
-        # Auto-genera slug si no existe
         if not self.slug:
-            from django.utils.text import slugify
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
     @property
     def product_count(self):
-        """Retorna el número de productos en esta categoría"""
-        return self.products.filter(is_active=True).count()
+        return self.products.filter(is_deleted=False, is_active=True).count()
 
     def get_image_url(self):
-        """Retorna la URL de la imagen o None"""
         if self.image:
             return self.image.url
         return None
 
     def get_initial(self):
-        """Retorna la primera letra del nombre de la categoría"""
         if self.name:
-            # Si el nombre tiene varias palabras, retorna la primera letra de la primera palabra
             return self.name[0].upper()
         return '?'
 
 
-class Product(models.Model):
-    """
-    Modelo de Producto
-    """
-    class ProductType(models.TextChoices):
-        PHYSICAL = 'physical', 'Physical Product'
-        SERVICE = 'service', 'Service'
+class Product(HubBaseModel):
+    """Product in the catalogue."""
 
-    name = models.CharField(max_length=255, verbose_name="Nombre")
-    sku = models.CharField(max_length=100, unique=True, verbose_name="SKU")
+    class ProductType(models.TextChoices):
+        PHYSICAL = 'physical', _('Physical Product')
+        SERVICE = 'service', _('Service')
+
+    name = models.CharField(_('Name'), max_length=255)
+    sku = models.CharField(_('SKU'), max_length=100)
     ean13 = models.CharField(
+        _('EAN-13'),
         max_length=13,
         blank=True,
-        null=True,
-        unique=True,
-        verbose_name="EAN-13",
-        help_text="Código de barras EAN-13 (13 dígitos)"
+        default='',
+        help_text=_('EAN-13 barcode (13 digits).'),
     )
-    description = models.TextField(blank=True, verbose_name="Descripción")
-
-    # Product Type (physical or service)
+    description = models.TextField(_('Description'), blank=True, default='')
     product_type = models.CharField(
+        _('Product Type'),
         max_length=20,
         choices=ProductType.choices,
         default=ProductType.PHYSICAL,
-        verbose_name="Product Type",
-        help_text="Physical products affect stock, services do not"
+        help_text=_('Physical products affect stock, services do not.'),
     )
-
     price = models.DecimalField(
+        _('Price'),
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name="Precio"
+        validators=[MinValueValidator(Decimal('0.00'))],
     )
     cost = models.DecimalField(
+        _('Cost'),
         max_digits=10,
         decimal_places=2,
         default=Decimal('0.00'),
         validators=[MinValueValidator(Decimal('0.00'))],
-        verbose_name="Costo"
     )
-    stock = models.IntegerField(
-        default=0,
-        validators=[MinValueValidator(0)],
-        verbose_name="Stock"
-    )
-    low_stock_threshold = models.IntegerField(
+    stock = models.IntegerField(_('Stock'), default=0)
+    low_stock_threshold = models.PositiveIntegerField(
+        _('Low Stock Threshold'),
         default=10,
-        validators=[MinValueValidator(0)],
-        verbose_name="Umbral de Stock Bajo"
     )
     categories = models.ManyToManyField(
         Category,
         blank=True,
         related_name='products',
-        verbose_name="Categorías",
-        help_text="Categorías del producto (puede pertenecer a múltiples)"
+        verbose_name=_('Categories'),
     )
-
-    # Tax Class Override (optional, inherits from category if not set)
     tax_class = models.ForeignKey(
         'configuration.TaxClass',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='products',
-        verbose_name="Tax Class Override",
-        help_text="Override the category's tax class (optional)"
+        verbose_name=_('Tax Class Override'),
+        help_text=_('Override the category tax class (optional).'),
     )
-
     image = models.ImageField(
+        _('Image'),
         upload_to='products/images/',
         blank=True,
         null=True,
-        verbose_name="Imagen"
     )
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+    is_active = models.BooleanField(_('Active'), default=True)
 
-    class Meta:
-        app_label = 'inventory'
+    class Meta(HubBaseModel.Meta):
         db_table = 'inventory_product'
-        verbose_name = "Producto"
-        verbose_name_plural = "Productos"
+        verbose_name = _('Product')
+        verbose_name_plural = _('Products')
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['sku']),
             models.Index(fields=['name']),
+            models.Index(fields=['is_active']),
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.sku})"
+        return f'{self.name} ({self.sku})'
+
+    def save(self, *args, **kwargs):
+        if self.name:
+            self.name = self.name.strip().capitalize()
+        super().save(*args, **kwargs)
 
     @property
     def is_low_stock(self):
-        """Indica si el producto tiene stock bajo"""
         return self.stock <= self.low_stock_threshold
 
     @property
     def profit_margin(self):
-        """Calcula el margen de ganancia"""
         if self.cost > 0:
             return ((self.price - self.cost) / self.cost) * 100
-        return 0
+        return Decimal('0')
 
     @property
     def is_service(self):
-        """Returns True if this is a service (doesn't affect stock)"""
         return self.product_type == self.ProductType.SERVICE
 
     def get_effective_tax_class(self):
         """
-        Get the effective tax class for this product.
-        Inheritance order: Product → Category → StoreConfig.default_tax_class
-
-        Returns:
-            TaxClass instance or None
+        Tax class inheritance: Product -> Category -> StoreConfig.default_tax_class.
         """
-        # 1. Product's own tax_class (override)
         if self.tax_class:
             return self.tax_class
-
-        # 2. First category with tax_class
         for category in self.categories.all():
             if category.tax_class:
                 return category.tax_class
-
-        # 3. StoreConfig default_tax_class
         from apps.configuration.models import StoreConfig
         store_config = StoreConfig.get_solo()
         return store_config.default_tax_class
 
     def get_tax_rate(self):
-        """
-        Get the effective tax rate for this product.
-
-        Returns:
-            Decimal: Tax rate as percentage (e.g., 21.00 for 21%)
-        """
+        """Effective tax rate as percentage (e.g. 21.00)."""
         tax_class = self.get_effective_tax_class()
         if tax_class:
             return tax_class.rate
-
-        # Fallback to legacy StoreConfig.tax_rate
         from apps.configuration.models import StoreConfig
         store_config = StoreConfig.get_solo()
         return store_config.tax_rate
 
     def get_image_path(self):
-        """Retorna la ruta relativa de la imagen"""
         if self.image:
             return self.image.url
         return '/static/products/images/placeholder.png'
 
     def get_initial(self):
-        """Retorna la primera letra del nombre del producto"""
         if self.name:
-            # Si el nombre tiene varias palabras, retorna la primera letra de la primera palabra
             return self.name[0].upper()
         return '?'
 
-    def save(self, *args, **kwargs):
-        """Auto-capitaliza el nombre"""
-        if self.name:
-            self.name = self.name.strip().capitalize()
-        super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        """Elimina la imagen del filesystem al eliminar el producto"""
-        if self.image:
-            if os.path.isfile(self.image.path):
-                os.remove(self.image.path)
-        super().delete(*args, **kwargs)
+class ProductVariant(HubBaseModel):
+    """Variant of a product (colour, size, weight, etc.)."""
 
-
-class ProductVariant(models.Model):
-    """
-    Modelo de Variante de Producto
-    Permite que un producto tenga múltiples variantes (color, peso, talla, etc.)
-    """
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         related_name='variants',
-        verbose_name="Producto"
+        verbose_name=_('Product'),
     )
     name = models.CharField(
+        _('Variant Name'),
         max_length=255,
-        verbose_name="Nombre de Variante",
-        help_text="Ej: 'Rojo XL', 'Azul M', '1kg', '500ml'"
+        help_text=_("E.g. 'Red XL', 'Blue M', '1kg'"),
     )
-    sku = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name="SKU de Variante",
-        help_text="SKU único para esta variante"
-    )
-
-    # Atributos de variante (JSON flexible)
+    sku = models.CharField(_('Variant SKU'), max_length=100)
     attributes = models.JSONField(
+        _('Attributes'),
         default=dict,
         blank=True,
-        verbose_name="Atributos",
-        help_text="Atributos como {'color': 'rojo', 'talla': 'XL', 'peso': '1kg'}"
+        help_text=_("E.g. {'color': 'red', 'size': 'XL'}"),
     )
-
-    # Precio puede ser diferente para cada variante
     price = models.DecimalField(
+        _('Price'),
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name="Precio",
-        help_text="Precio específico para esta variante (puede ser diferente al producto base)"
+        validators=[MinValueValidator(Decimal('0.00'))],
     )
-
-    # Stock independiente por variante
-    stock = models.IntegerField(
-        default=0,
-        validators=[MinValueValidator(0)],
-        verbose_name="Stock"
-    )
-
-    # Imagen específica para la variante (opcional)
+    stock = models.IntegerField(_('Stock'), default=0)
     image = models.ImageField(
+        _('Variant Image'),
         upload_to='products/variants/',
         blank=True,
         null=True,
-        verbose_name="Imagen de Variante"
     )
+    is_active = models.BooleanField(_('Active'), default=True)
 
-    is_active = models.BooleanField(default=True, verbose_name="Activa")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
-
-    class Meta:
-        app_label = 'inventory'
+    class Meta(HubBaseModel.Meta):
         db_table = 'inventory_product_variant'
-        verbose_name = "Variante de Producto"
-        verbose_name_plural = "Variantes de Producto"
+        verbose_name = _('Product Variant')
+        verbose_name_plural = _('Product Variants')
         ordering = ['product', 'name']
-        unique_together = [['product', 'name']]  # Un producto no puede tener dos variantes con el mismo nombre
         indexes = [
             models.Index(fields=['sku']),
             models.Index(fields=['product', 'is_active']),
         ]
 
     def __str__(self):
-        return f"{self.product.name} - {self.name}"
+        return f'{self.product.name} - {self.name}'
 
     def save(self, *args, **kwargs):
-        """Auto-capitaliza el nombre"""
         if self.name:
             self.name = self.name.strip().capitalize()
         super().save(*args, **kwargs)
 
     @property
     def is_low_stock(self):
-        """Indica si la variante tiene stock bajo (usa el umbral del producto padre)"""
         return self.stock <= self.product.low_stock_threshold
 
-    def delete(self, *args, **kwargs):
-        """Elimina la imagen del filesystem al eliminar la variante"""
-        if self.image:
-            if os.path.isfile(self.image.path):
-                os.remove(self.image.path)
-        super().delete(*args, **kwargs)
+
+# --- Warehousing & Stock ---
+
+class Warehouse(HubBaseModel):
+    """Physical or logical warehouse / storage location."""
+
+    name = models.CharField(_('Name'), max_length=100)
+    code = models.CharField(
+        _('Code'),
+        max_length=20,
+        blank=True,
+        default='',
+        help_text=_('Short code (e.g. WH-01).'),
+    )
+    address = models.TextField(_('Address'), blank=True, default='')
+    is_active = models.BooleanField(_('Active'), default=True)
+    is_default = models.BooleanField(
+        _('Default Warehouse'),
+        default=False,
+        help_text=_('Default warehouse for new stock.'),
+    )
+    sort_order = models.PositiveIntegerField(_('Sort Order'), default=0)
+
+    class Meta(HubBaseModel.Meta):
+        db_table = 'inventory_warehouse'
+        verbose_name = _('Warehouse')
+        verbose_name_plural = _('Warehouses')
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class StockLevel(HubBaseModel):
+    """Denormalised stock count per product-warehouse pair."""
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stock_levels',
+        verbose_name=_('Product'),
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name='stock_levels',
+        verbose_name=_('Warehouse'),
+    )
+    quantity = models.IntegerField(_('Quantity'), default=0)
+
+    class Meta(HubBaseModel.Meta):
+        db_table = 'inventory_stock_level'
+        verbose_name = _('Stock Level')
+        verbose_name_plural = _('Stock Levels')
+        unique_together = [('product', 'warehouse')]
+
+    def __str__(self):
+        return f'{self.product.name} @ {self.warehouse.name}: {self.quantity}'
+
+
+class StockMovement(HubBaseModel):
+    """Audit trail for every stock change."""
+
+    class MovementType(models.TextChoices):
+        IN = 'in', _('Stock In')
+        OUT = 'out', _('Stock Out')
+        ADJUSTMENT = 'adjustment', _('Adjustment')
+        TRANSFER = 'transfer', _('Transfer')
+        RETURN = 'return', _('Return')
+        SALE = 'sale', _('Sale')
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stock_movements',
+        verbose_name=_('Product'),
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_movements',
+        verbose_name=_('Warehouse'),
+    )
+    movement_type = models.CharField(
+        _('Movement Type'),
+        max_length=20,
+        choices=MovementType.choices,
+    )
+    quantity = models.IntegerField(
+        _('Quantity'),
+        help_text=_('Positive for in, negative for out.'),
+    )
+    reference = models.CharField(
+        _('Reference'),
+        max_length=100,
+        blank=True,
+        default='',
+        help_text=_('Sale number, PO number, etc.'),
+    )
+    notes = models.TextField(_('Notes'), blank=True, default='')
+
+    class Meta(HubBaseModel.Meta):
+        db_table = 'inventory_stock_movement'
+        verbose_name = _('Stock Movement')
+        verbose_name_plural = _('Stock Movements')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['movement_type']),
+            models.Index(fields=['product', 'warehouse']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_movement_type_display()} {self.quantity} x {self.product.name}'
+
+
+class StockAlert(HubBaseModel):
+    """Alert when a product falls below its low-stock threshold."""
+
+    class AlertStatus(models.TextChoices):
+        ACTIVE = 'active', _('Active')
+        ACKNOWLEDGED = 'acknowledged', _('Acknowledged')
+        RESOLVED = 'resolved', _('Resolved')
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stock_alerts',
+        verbose_name=_('Product'),
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_alerts',
+        verbose_name=_('Warehouse'),
+    )
+    current_stock = models.IntegerField(_('Current Stock'))
+    threshold = models.IntegerField(_('Threshold'))
+    status = models.CharField(
+        _('Status'),
+        max_length=20,
+        choices=AlertStatus.choices,
+        default=AlertStatus.ACTIVE,
+    )
+    acknowledged_at = models.DateTimeField(_('Acknowledged At'), null=True, blank=True)
+    resolved_at = models.DateTimeField(_('Resolved At'), null=True, blank=True)
+
+    class Meta(HubBaseModel.Meta):
+        db_table = 'inventory_stock_alert'
+        verbose_name = _('Stock Alert')
+        verbose_name_plural = _('Stock Alerts')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f'Alert: {self.product.name} ({self.current_stock}/{self.threshold})'

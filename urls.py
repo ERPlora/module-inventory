@@ -5,31 +5,26 @@ app_name = 'inventory'
 
 urlpatterns = [
     # Dashboard
-    path('', views.dashboard, name='dashboard'),  # Main inventory dashboard
+    path('', views.dashboard, name='dashboard'),
 
     # Products
-    path('products/', views.products_list, name='products_list'),  # Products list with DataTable
-    path('products/api/list/', views.product_list_ajax, name='product_list_ajax'),
-    path('products/create/', views.product_create, name='product_create'),
-    path('products/<int:pk>/', views.product_view, name='product_view'),
-    path('products/<int:pk>/edit/', views.product_edit, name='product_edit'),
-    path('products/<int:pk>/delete/', views.product_delete, name='product_delete'),
-    path('products/<int:product_id>/barcode/', views.generate_barcode, name='generate_barcode'),
-    path('products/export/csv/', views.export_csv, name='export_csv'),
-    path('products/export/excel/', views.export_csv, name='export_excel'),  # Mismo handler, detecta por query param
-    path('products/import/csv/', views.import_csv, name='import_csv'),
-    path('products/import/excel/', views.import_excel, name='import_excel'),
+    path('products/', views.products_list, name='products_list'),
+    path('products/add/', views.product_add, name='product_add'),
+    path('products/<uuid:pk>/edit/', views.product_edit, name='product_edit'),
+    path('products/<uuid:pk>/delete/', views.product_delete, name='product_delete'),
+    path('products/<uuid:pk>/toggle/', views.product_toggle_status, name='product_toggle_status'),
+    path('products/bulk/', views.products_bulk_action, name='products_bulk_action'),
+    path('products/import/', views.products_import, name='products_import'),
+    path('products/<uuid:product_id>/barcode/', views.generate_barcode, name='generate_barcode'),
 
     # Categories
     path('categories/', views.categories_index, name='categories_index'),
-    path('categories/create/', views.category_create, name='category_create'),
-    path('categories/edit/<int:pk>/', views.category_edit, name='category_edit'),
-    path('categories/delete/<int:pk>/', views.category_delete, name='category_delete'),
-    path('categories/api/', views.categories_list, name='categories_list'),
-    path('categories/export/csv/', views.export_categories_csv, name='export_categories_csv'),
-    path('categories/export/excel/', views.export_categories_excel, name='export_categories_excel'),
-    path('categories/import/csv/', views.import_categories_csv, name='import_categories_csv'),
-    path('categories/import/excel/', views.import_categories_excel, name='import_categories_excel'),
+    path('categories/add/', views.category_add, name='category_add'),
+    path('categories/<uuid:pk>/edit/', views.category_edit, name='category_edit'),
+    path('categories/<uuid:pk>/delete/', views.category_delete, name='category_delete'),
+    path('categories/<uuid:pk>/toggle/', views.category_toggle_status, name='category_toggle_status'),
+    path('categories/bulk/', views.categories_bulk_action, name='categories_bulk_action'),
+    path('categories/import/', views.categories_import, name='categories_import'),
 
     # Reports
     path('reports/', views.reports_view, name='reports'),

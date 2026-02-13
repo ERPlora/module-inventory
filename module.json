@@ -1,43 +1,33 @@
 {
-  "module_id": "inventory",
-  "name": "Inventory Manager",
-  "name_es": "Gestión de Inventario",
-  "version": "1.0.0",
-  "description": "Comprehensive inventory management module with products, categories, stock control, and CSV/Excel import/export",
-  "description_es": "Módulo completo para gestión de inventario con productos, categorías, control de stock, e importación/exportación de CSV y Excel",
+  "id": "inventory",
+  "name": "Inventory",
+  "version": "2.0.0",
+  "description": "Product catalogue, stock management, warehouses, and import/export",
   "author": "ERPlora",
-  "author_email": "support@erplora.com",
-  "license": "MIT",
   "category": "inventory",
-  "tags": ["inventory", "stock", "products", "warehouse", "catalog", "import", "export"],
   "icon": "cube-outline",
-  "homepage": "https://github.com/ERPlora/module-inventory",
-  "repository_url": "https://github.com/ERPlora/module-inventory",
-  "documentation": "https://docs.erplora.com/modules/inventory",
+  "order": 10,
+  "tags": ["inventory", "stock", "products", "warehouse", "catalog", "import", "export"],
 
   "dependencies": {
-    "python": [
-      "Pillow>=10.0.0",
-      "openpyxl>=3.1.0"
-    ],
+    "python": ["Pillow>=10.0.0", "openpyxl>=3.1.0", "python-barcode>=0.15.0"],
     "modules": []
   },
 
-  "compatibility": {
-    "min_erplora_version": "1.0.0",
-    "max_erplora_version": "2.0.0"
+  "menu": {
+    "label": "Inventory",
+    "icon": "cube-outline",
+    "url": "/modules/inventory/",
+    "order": 10
   },
 
-  "features": {
-    "i18n": true,
-    "languages": ["en", "es"],
-    "api": true,
-    "webhooks": false,
-    "background_tasks": false,
-    "supports_images": true,
-    "supports_export": true,
-    "supports_import": true
-  },
+  "navigation": [
+    {"label": "Dashboard", "icon": "speedometer-outline", "id": "dashboard"},
+    {"label": "Products", "icon": "storefront-outline", "id": "products"},
+    {"label": "Categories", "icon": "pricetags-outline", "id": "categories"},
+    {"label": "Reports", "icon": "bar-chart-outline", "id": "reports"},
+    {"label": "Settings", "icon": "settings-outline", "id": "settings"}
+  ],
 
   "permissions": [
     "inventory.view_product",
@@ -47,76 +37,13 @@
     "inventory.view_category",
     "inventory.add_category",
     "inventory.change_category",
-    "inventory.delete_category"
-  ],
-
-  "menu": {
-    "label": "Inventory",
-    "label_es": "Inventario",
-    "icon": "cube-outline",
-    "url": "/modules/inventory/",
-    "order": 10
-  },
-
-  "settings": {
-    "allow_negative_stock": {
-      "type": "boolean",
-      "default": false,
-      "label": "Allow Negative Stock",
-      "label_es": "Permitir Stock Negativo",
-      "description": "Allow products to have negative stock values",
-      "description_es": "Permitir que los productos tengan valores de stock negativos"
-    },
-    "low_stock_alert_enabled": {
-      "type": "boolean",
-      "default": true,
-      "label": "Low Stock Alerts",
-      "label_es": "Alertas de Stock Bajo",
-      "description": "Send alerts when products reach low stock threshold",
-      "description_es": "Enviar alertas cuando los productos alcancen el umbral de stock bajo"
-    }
-  },
-
-  "api_endpoints": [
-    {"path": "/api/list/", "method": "GET", "description": "List products with pagination and search"},
-    {"path": "/api/categories/", "method": "GET", "description": "List active categories"},
-    {"path": "/create/", "method": "POST", "description": "Create a new product"},
-    {"path": "/edit/<int:pk>/", "method": "POST", "description": "Update an existing product"},
-    {"path": "/delete/<int:pk>/", "method": "POST", "description": "Delete a product"},
-    {"path": "/export/csv/", "method": "GET", "description": "Export products to CSV"},
-    {"path": "/import/csv/", "method": "POST", "description": "Import products from CSV"},
-    {"path": "/import/excel/", "method": "POST", "description": "Import products from Excel"}
-  ],
-
-  "database": {
-    "migrations": true,
-    "models": ["Product", "Category"]
-  },
-
-  "static_files": {
-    "css": ["inventory/css/inventory.css"],
-    "js": ["inventory/js/avatar.js", "inventory/js/inventory.js"]
-  },
-
-  "media_uploads": {
-    "products": "inventory/products/images/",
-    "categories": "inventory/categories/"
-  },
-
-  "changelog": {
-    "1.0.0": {
-      "date": "2025-01-04",
-      "changes": [
-        "Initial release",
-        "Product CRUD operations with image support",
-        "Category management with images and colors",
-        "Multi-language support (English/Spanish)",
-        "CSV/Excel import/export functionality",
-        "Avatar system with letter fallback",
-        "Search and pagination",
-        "Stock management with low stock alerts",
-        "Profit margin calculation"
-      ]
-    }
-  }
+    "inventory.delete_category",
+    "inventory.view_warehouse",
+    "inventory.add_warehouse",
+    "inventory.change_warehouse",
+    "inventory.view_stockmovement",
+    "inventory.add_stockmovement",
+    "inventory.view_reports",
+    "inventory.manage_settings"
+  ]
 }

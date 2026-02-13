@@ -1,159 +1,216 @@
-{% load static %}
-{% load i18n %}
+{% load i18n djicons %}
 
-{% if request.htmx %}
-<!-- Tab bar update via OOB swap (only on HTMX navigation) -->
-<div id="dashboard-tabbar" hx-swap-oob="innerHTML">
-<ion-footer>
-{% include "inventory/partials/tabbar.html" %}
-</ion-footer>
-</div>
-{% endif %}
-
-<div class="ion-padding">
+<div class="p-4">
     <!-- Page Header -->
     <div class="mb-6">
-        <h1 class="text-2xl font-bold" style="color: var(--ion-text-color);">{% trans "Inventory" %}</h1>
-        <p class="text-sm mt-1" style="color: var(--ion-color-medium);">{% trans "Products, categories and stock management" %}</p>
+        <h1 class="text-2xl font-bold">{% trans "Inventory" %}</h1>
+        <p class="text-sm mt-1 opacity-60">{% trans "Products, categories and stock management" %}</p>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
+        <div class="card">
+            <div class="card-body">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="cube-outline" class="text-xl text-primary"></ion-icon>
+                        {% icon "cube-outline" css_class="text-xl text-primary" %}
                     </div>
                     <div>
-                        <div class="text-xs text-medium">{% trans "Total Products" %}</div>
+                        <div class="text-xs opacity-60">{% trans "Total Products" %}</div>
                         <div class="text-xl font-semibold">{{ total_products }}</div>
                     </div>
                 </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="checkmark-circle-outline" class="text-xl text-success"></ion-icon>
+                        {% icon "checkmark-circle-outline" css_class="text-xl text-success" %}
                     </div>
                     <div>
-                        <div class="text-xs text-medium">{% trans "In Stock" %}</div>
+                        <div class="text-xs opacity-60">{% trans "In Stock" %}</div>
                         <div class="text-xl font-semibold">{{ products_in_stock }}</div>
                     </div>
                 </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="alert-circle-outline" class="text-xl text-warning"></ion-icon>
+                        {% icon "alert-circle-outline" css_class="text-xl text-warning" %}
                     </div>
                     <div>
-                        <div class="text-xs text-medium">{% trans "Low Stock" %}</div>
+                        <div class="text-xs opacity-60">{% trans "Low Stock" %}</div>
                         <div class="text-xl font-semibold">{{ products_low_stock }}</div>
                     </div>
                 </div>
-            </ion-card-content>
-        </ion-card>
-
-        <ion-card class="m-0">
-            <ion-card-content class="p-4">
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                        <ion-icon name="cash-outline" class="text-xl text-success"></ion-icon>
+                        {% icon "cash-outline" css_class="text-xl text-success" %}
                     </div>
                     <div>
-                        <div class="text-xs text-medium">{% trans "Total Value" %}</div>
-                        <div class="text-xl font-semibold">{{ currency }}{{ total_inventory_value|floatformat:2 }}</div>
+                        <div class="text-xs opacity-60">{% trans "Total Value" %}</div>
+                        <div class="text-xl font-semibold">{{ currency }} {{ total_inventory_value|floatformat:2 }}</div>
                     </div>
                 </div>
-            </ion-card-content>
-        </ion-card>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h3 class="card-title">{% trans "Quick Actions" %}</h3>
+        </div>
+        <div class="list list-inset">
+            <a class="list-item list-item-clickable"
+               hx-get="{% url 'inventory:products_list' %}"
+               hx-target="#main-content-area"
+               hx-push-url="true">
+                <div class="list-item-start">
+                    <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        {% icon "add-circle-outline" css_class="text-xl text-primary" %}
+                    </div>
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Add Product" %}</div>
+                    <div class="list-item-note">{% trans "Create a new product in the catalog" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <span class="list-item-chevron">{% icon "chevron-forward-outline" %}</span>
+                </div>
+            </a>
+            <a class="list-item list-item-clickable"
+               hx-get="{% url 'inventory:categories_index' %}"
+               hx-target="#main-content-area"
+               hx-push-url="true">
+                <div class="list-item-start">
+                    <div class="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
+                        {% icon "pricetags-outline" css_class="text-xl text-warning" %}
+                    </div>
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Add Category" %}</div>
+                    <div class="list-item-note">{% trans "Create a new product category" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <span class="list-item-chevron">{% icon "chevron-forward-outline" %}</span>
+                </div>
+            </a>
+            <a class="list-item list-item-clickable"
+               hx-get="{% url 'inventory:reports' %}"
+               hx-target="#main-content-area"
+               hx-push-url="true">
+                <div class="list-item-start">
+                    <div class="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                        {% icon "bar-chart-outline" css_class="text-xl text-success" %}
+                    </div>
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "View Reports" %}</div>
+                    <div class="list-item-note">{% trans "Inventory analytics and statistics" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <span class="list-item-chevron">{% icon "chevron-forward-outline" %}</span>
+                </div>
+            </a>
+        </div>
     </div>
 
     <!-- Categories Summary -->
-    <ion-card class="m-0 mb-6">
-        <ion-card-header>
-            <div class="flex justify-between items-center">
-                <ion-card-title>{% trans "Categories" %}</ion-card-title>
-                <ion-button size="small" fill="clear"
-                    hx-get="{% url 'inventory:categories_index' %}"
-                    hx-target="#dashboard-content"
-                    hx-push-url="true">
+    <div class="card mb-6">
+        <div class="card-header">
+            <div class="flex justify-between items-center w-full">
+                <h3 class="card-title">{% trans "Categories" %}</h3>
+                <button class="btn btn-ghost btn-sm"
+                        hx-get="{% url 'inventory:categories_index' %}"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
                     {% trans "View all" %}
-                    <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
-                </ion-button>
+                    {% icon "arrow-forward-outline" %}
+                </button>
             </div>
-        </ion-card-header>
-        <ion-card-content>
+        </div>
+        <div class="card-body">
             {% if categories %}
             <div class="space-y-3">
                 {% for category in categories %}
-                <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--ion-color-light);">
+                <div class="flex items-center justify-between p-3 rounded-lg bg-base-200/50">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 flex items-center justify-center rounded-lg" style="background: {{ category.color }}20;">
-                            <ion-icon name="{{ category.icon }}" style="color: {{ category.color }}; font-size: 20px;"></ion-icon>
+                        <div class="w-10 h-10 flex items-center justify-center rounded-lg"
+                             style="background-color: {{ category.color }}20; color: {{ category.color }};">
+                            {% icon category.icon %}
                         </div>
                         <div>
-                            <div class="font-medium" style="color: var(--ion-text-color);">{{ category.name }}</div>
-                            <div class="text-xs" style="color: var(--ion-color-medium);">{{ category.product_count }} {% trans "products" %}</div>
+                            <div class="font-medium text-sm">{{ category.name }}</div>
+                            <div class="text-xs opacity-50">{{ category.product_count }} {% trans "products" %}</div>
                         </div>
                     </div>
+                    <span class="badge" style="background-color: {{ category.color }}; color: white;">{{ category.product_count }}</span>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="text-center py-8" style="color: var(--ion-color-medium);">
-                <ion-icon name="albums-outline" style="font-size: 48px;"></ion-icon>
+            <div class="text-center py-8 opacity-50">
+                {% icon "albums-outline" css_class="text-4xl mb-2" %}
                 <p class="mt-2">{% trans "No categories created" %}</p>
+                <button class="btn btn-outline btn-sm mt-3"
+                        hx-get="{% url 'inventory:categories_index' %}"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
+                    {% trans "Create your first category" %}
+                </button>
             </div>
             {% endif %}
-        </ion-card-content>
-    </ion-card>
+        </div>
+    </div>
 
     <!-- Low Stock Products -->
     {% if low_stock_products %}
-    <ion-card class="m-0">
-        <ion-card-header>
-            <div class="flex justify-between items-center">
-                <ion-card-title>
-                    <ion-icon name="alert-circle-outline" class="text-warning" style="vertical-align: middle;"></ion-icon>
+    <div class="card">
+        <div class="card-header">
+            <div class="flex justify-between items-center w-full">
+                <h3 class="card-title">
+                    {% icon "alert-circle-outline" css_class="text-warning" %}
                     {% trans "Low Stock Products" %}
-                </ion-card-title>
-                <ion-button size="small" fill="clear"
-                    hx-get="{% url 'inventory:products_list' %}?low_stock=1"
-                    hx-target="#dashboard-content"
-                    hx-push-url="true">
+                </h3>
+                <button class="btn btn-ghost btn-sm"
+                        hx-get="{% url 'inventory:products_list' %}?status=low_stock"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
                     {% trans "View all" %}
-                    <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
-                </ion-button>
+                    {% icon "arrow-forward-outline" %}
+                </button>
             </div>
-        </ion-card-header>
-        <ion-card-content>
-            <ion-list lines="full">
-                {% for product in low_stock_products %}
-                <ion-item>
-                    <div slot="start" class="w-10 h-10 flex items-center justify-center rounded-lg" style="background: var(--ion-color-light);">
-                        {% if product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-10 h-10 object-cover rounded-lg">
-                        {% else %}
-                        <ion-icon name="cube-outline" style="color: var(--ion-color-medium);"></ion-icon>
-                        {% endif %}
+        </div>
+        <div class="list list-inset">
+            {% for product in low_stock_products %}
+            <div class="list-item">
+                <div class="list-item-start">
+                    {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-10 h-10 object-cover rounded-lg">
+                    {% else %}
+                    <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-base-200">
+                        {% icon "cube-outline" css_class="opacity-50" %}
                     </div>
-                    <ion-label>
-                        <h3>{{ product.name }}</h3>
-                        <p>{{ product.sku }}</p>
-                    </ion-label>
-                    <ion-badge slot="end" color="warning">{{ product.stock }}</ion-badge>
-                </ion-item>
-                {% endfor %}
-            </ion-list>
-        </ion-card-content>
-    </ion-card>
+                    {% endif %}
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{{ product.name }}</div>
+                    <div class="list-item-note">{{ product.sku }}</div>
+                </div>
+                <div class="list-item-end">
+                    <span class="badge {% if product.stock == 0 %}color-error{% else %}color-warning{% endif %}">{{ product.stock }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
     {% endif %}
 </div>

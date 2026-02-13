@@ -38,9 +38,9 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'icon', 'color', 'order', 'product_count', 'is_active']
+    list_display = ['name', 'slug', 'icon', 'color', 'sort_order', 'product_count', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name', 'slug', 'description']
-    list_editable = ['is_active', 'order']
+    list_editable = ['is_active', 'sort_order']
     readonly_fields = ['created_at', 'updated_at']
     prepopulated_fields = {'slug': ('name',)}

@@ -1,7 +1,7 @@
 """
-Context processors for Inventory plugin.
+Context processors for Inventory module.
 
-Makes plugin-specific configuration available in all inventory templates.
+Makes module-specific configuration available in all inventory templates.
 Note: hub_config and store_config are already available globally via
 apps.core.context_processors.hub_config_context
 """
@@ -9,18 +9,19 @@ apps.core.context_processors.hub_config_context
 
 def inventory_settings(request):
     """
-    Add inventory plugin settings to template context.
-
-    This makes the following available in all inventory templates:
-    - inventory_settings: Plugin-specific configuration (low stock threshold, etc.)
+    Add inventory settings to template context.
     """
     from .models import InventorySettings
 
     try:
-        settings_obj = InventorySettings.get_settings()
+        hub_id = request.session.get('hub_id')
+        if hub_id:
+            settings_obj = InventorySettings.get_settings(hub_id)
+        else:
+            settings_obj = None
     except Exception:
         settings_obj = None
 
     return {
-        'inventory_settings': settings_obj
+        'inventory_settings': settings_obj,
     }

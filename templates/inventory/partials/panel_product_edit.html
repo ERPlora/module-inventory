@@ -1,0 +1,185 @@
+{% load i18n djicons %}
+
+<div x-data="{ confirmDelete: false }">
+
+    <!-- Header -->
+    <div class="side-sheet-header">
+        <h3 class="sheet-title">{% trans "Edit Product" %}</h3>
+        <button class="sheet-close" @click="closePanel()">
+            {% icon "close-outline" %}
+        </button>
+    </div>
+
+    <!-- Body -->
+    <div class="side-sheet-content">
+        <form id="edit-product-form"
+              hx-post="{% url 'inventory:product_edit' product.id %}"
+              hx-target="#datatable-body"
+              hx-swap="innerHTML"
+              hx-encoding="multipart/form-data"
+              @htmx:after-request="closePanel()"
+              class="flex flex-col gap-4 p-6">
+            {% csrf_token %}
+
+            {% if error %}
+            <div class="callout callout-error">
+                <div class="callout-content">
+                    <span class="callout-text">{{ error }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Image Preview -->
+            {% if product.image %}
+            <div class="text-center mb-2">
+                <div class="w-20 h-20 rounded-lg overflow-hidden mx-auto">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Name -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Name" %}</label>
+                <input type="text" name="name" class="input input-sm w-full"
+                       value="{{ product.name }}" placeholder="{% trans 'Product name' %}" required>
+            </div>
+
+            <!-- SKU -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "SKU" %}</label>
+                <input type="text" name="sku" class="input input-sm w-full"
+                       value="{{ product.sku }}" placeholder="{% trans 'SKU code' %}" required>
+            </div>
+
+            <!-- Type -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Type" %}</label>
+                <select name="product_type" class="select select-sm w-full">
+                    <option value="physical" {% if product.product_type == 'physical' %}selected{% endif %}>{% trans "Physical Product" %}</option>
+                    <option value="service" {% if product.product_type == 'service' %}selected{% endif %}>{% trans "Service" %}</option>
+                </select>
+            </div>
+
+            <!-- Price & Cost -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-sm font-medium mb-1 block">{% trans "Price" %}</label>
+                    <input type="number" name="price" class="input input-sm w-full"
+                           step="0.01" min="0" value="{{ product.price }}" required>
+                </div>
+                <div>
+                    <label class="text-sm font-medium mb-1 block">{% trans "Cost" %}</label>
+                    <input type="number" name="cost" class="input input-sm w-full"
+                           step="0.01" min="0" value="{{ product.cost }}">
+                </div>
+            </div>
+
+            <!-- Stock & Threshold -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-sm font-medium mb-1 block">{% trans "Stock" %}</label>
+                    <input type="number" name="stock" class="input input-sm w-full"
+                           min="0" value="{{ product.stock }}">
+                </div>
+                <div>
+                    <label class="text-sm font-medium mb-1 block">{% trans "Low Stock" %}</label>
+                    <input type="number" name="low_stock_threshold" class="input input-sm w-full"
+                           min="0" value="{{ product.low_stock_threshold }}">
+                </div>
+            </div>
+
+            <!-- EAN-13 -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "EAN-13" %}</label>
+                <input type="text" name="ean13" class="input input-sm w-full"
+                       value="{{ product.ean13 }}" placeholder="{% trans 'Optional barcode' %}" maxlength="13">
+            </div>
+
+            <!-- Categories -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Categories" %}</label>
+                <select name="categories" class="select select-sm w-full" multiple>
+                    {% for cat in categories_list %}
+                    <option value="{{ cat.id }}" {% if cat in product.categories.all %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Tax Class -->
+            {% if tax_classes %}
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Tax Class" %}</label>
+                <select name="tax_class" class="select select-sm w-full">
+                    <option value="">{% trans "Default" %}</option>
+                    {% for tc in tax_classes %}
+                    <option value="{{ tc.id }}" {% if product.tax_class_id == tc.id %}selected{% endif %}>{{ tc.name }} ({{ tc.rate }}%)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <!-- Description -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Description" %}</label>
+                <textarea name="description" class="textarea textarea-sm w-full" rows="3"
+                          placeholder="{% trans 'Product description' %}">{{ product.description }}</textarea>
+            </div>
+
+            <!-- Image -->
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Image" %}</label>
+                <input type="file" name="image" accept="image/*" class="input input-sm w-full">
+            </div>
+        </form>
+
+        <!-- Delete Section -->
+        <div class="border-t border-base-300 pt-4 mt-4 px-6 pb-6">
+            <h4 class="font-semibold text-sm mb-3 text-error">{% trans "Danger Zone" %}</h4>
+
+            <template x-if="!confirmDelete">
+                <button type="button" class="btn btn-sm btn-outline color-error w-full"
+                        @click="confirmDelete = true">
+                    {% icon "trash-outline" %}
+                    {% trans "Delete Product" %}
+                </button>
+            </template>
+
+            <template x-if="confirmDelete">
+                <div>
+                    <p class="text-error text-sm font-semibold mb-3">
+                        {% trans "Are you sure?" %}
+                    </p>
+                    <div class="flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline flex-1"
+                                @click="confirmDelete = false">
+                            {% trans "Cancel" %}
+                        </button>
+                        <button type="button" class="btn btn-sm color-error flex-1"
+                                hx-post="{% url 'inventory:product_delete' product.id %}"
+                                hx-target="#datatable-body"
+                                hx-swap="innerHTML"
+                                @click="closePanel()">
+                            {% icon "trash-outline" %}
+                            {% trans "Delete" %}
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="side-sheet-footer">
+        <div class="flex justify-end gap-2">
+            <button type="button" class="btn btn-ghost btn-sm" @click="closePanel()">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" form="edit-product-form" class="btn btn-sm color-primary">
+                {% icon "checkmark-outline" %}
+                {% trans "Save" %}
+            </button>
+        </div>
+    </div>
+
+</div>

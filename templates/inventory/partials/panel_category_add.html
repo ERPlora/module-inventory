@@ -1,0 +1,97 @@
+{% load i18n djicons %}
+
+<!-- Header -->
+<div class="side-sheet-header">
+    <h3 class="sheet-title">{% trans "Add Category" %}</h3>
+    <button class="sheet-close" @click="closePanel()">
+        {% icon "close-outline" %}
+    </button>
+</div>
+
+<!-- Body -->
+<div class="side-sheet-content">
+    <form id="add-category-form"
+          hx-post="{% url 'inventory:category_add' %}"
+          hx-target="#datatable-body"
+          hx-swap="innerHTML"
+          hx-encoding="multipart/form-data"
+          @htmx:after-request="closePanel()"
+          class="flex flex-col gap-4 p-6">
+        {% csrf_token %}
+
+        {% if error %}
+        <div class="callout callout-error">
+            <div class="callout-content">
+                <span class="callout-text">{{ error }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Name -->
+        <div>
+            <label class="text-sm font-medium mb-1 block">{% trans "Name" %}</label>
+            <input type="text" name="name" class="input input-sm w-full"
+                   placeholder="{% trans 'Category name' %}" required>
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label class="text-sm font-medium mb-1 block">{% trans "Description" %}</label>
+            <textarea name="description" class="textarea textarea-sm w-full" rows="2"
+                      placeholder="{% trans 'Optional description' %}"></textarea>
+        </div>
+
+        <!-- Icon & Color -->
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Icon" %}</label>
+                <input type="text" name="icon" class="input input-sm w-full"
+                       placeholder="cube-outline" value="cube-outline">
+            </div>
+            <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Color" %}</label>
+                <input type="color" name="color" class="input input-sm w-full"
+                       value="#3880ff">
+            </div>
+        </div>
+
+        <!-- Sort Order -->
+        <div>
+            <label class="text-sm font-medium mb-1 block">{% trans "Sort Order" %}</label>
+            <input type="number" name="sort_order" class="input input-sm w-full"
+                   min="0" value="0">
+        </div>
+
+        <!-- Tax Class -->
+        {% if tax_classes %}
+        <div>
+            <label class="text-sm font-medium mb-1 block">{% trans "Default Tax Class" %}</label>
+            <select name="tax_class" class="select select-sm w-full">
+                <option value="">{% trans "None" %}</option>
+                {% for tc in tax_classes %}
+                <option value="{{ tc.id }}">{{ tc.name }} ({{ tc.rate }}%)</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <!-- Image -->
+        <div>
+            <label class="text-sm font-medium mb-1 block">{% trans "Image" %}</label>
+            <input type="file" name="image" accept="image/*" class="input input-sm w-full">
+        </div>
+    </form>
+</div>
+
+<!-- Footer -->
+<div class="side-sheet-footer">
+    <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost btn-sm" @click="closePanel()">
+            {% trans "Cancel" %}
+        </button>
+        <button type="submit" form="add-category-form" class="btn btn-sm color-primary">
+            {% icon "add-outline" %}
+            {% trans "Add Category" %}
+        </button>
+    </div>
+</div>
