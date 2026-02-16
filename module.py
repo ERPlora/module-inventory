@@ -2,6 +2,7 @@ from django.utils.translation import gettext_lazy as _
 
 MODULE_ID = 'inventory'
 MODULE_NAME = _('Inventory')
+MODULE_VERSION = '1.0.0'
 MODULE_ICON = 'cube-outline'
 
 MENU = {
