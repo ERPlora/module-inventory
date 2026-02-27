@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from apps.accounts.decorators import login_required
+from apps.accounts.decorators import login_required, permission_required
 from apps.core.htmx import htmx_view
 from apps.core.services import export_to_csv, export_to_excel
 from apps.core.services.import_service import parse_import_file, ImportResult
@@ -860,6 +860,7 @@ def reports_view(request):
 # ---------------------------------------------------------------------------
 
 @login_required
+@permission_required('inventory.manage_settings')
 @with_module_nav('inventory', 'settings')
 @htmx_view('inventory/pages/settings.html', 'inventory/partials/settings_content.html')
 def settings_view(request):
