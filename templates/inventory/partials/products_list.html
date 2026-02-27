@@ -56,38 +56,34 @@
                         <span class="checkbox-mark"></span>
                     </label>
                 </th>
-                <th class="datatable-th datatable-th-sortable{% if sort_field == 'name' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                <th class="cursor-pointer datatable-th datatable-th-sortable{% if sort_field == 'name' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
                     hx-get="{% url 'inventory:products_list' %}?sort=name&dir={% if sort_field == 'name' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                     hx-target="#datatable-body"
-                    hx-include="#products-datatable"
-                    style="cursor: pointer;">
+                    hx-include="#products-datatable">
                     {% trans "Product" %}
                     <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
                 </th>
-                <th class="datatable-th datatable-th-sortable{% if sort_field == 'sku' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                <th class="cursor-pointer datatable-th datatable-th-sortable{% if sort_field == 'sku' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
                     data-col="sku"
                     hx-get="{% url 'inventory:products_list' %}?sort=sku&dir={% if sort_field == 'sku' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                     hx-target="#datatable-body"
-                    hx-include="#products-datatable"
-                    style="cursor: pointer;">
+                    hx-include="#products-datatable">
                     {% trans "SKU" %}
                     <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
                 </th>
-                <th class="datatable-th datatable-th-sortable{% if sort_field == 'price' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                <th class="cursor-pointer datatable-th datatable-th-sortable{% if sort_field == 'price' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
                     data-col="price"
                     hx-get="{% url 'inventory:products_list' %}?sort=price&dir={% if sort_field == 'price' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                     hx-target="#datatable-body"
-                    hx-include="#products-datatable"
-                    style="cursor: pointer;">
+                    hx-include="#products-datatable">
                     {% trans "Price" %}
                     <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
                 </th>
-                <th class="datatable-th datatable-th-sortable{% if sort_field == 'stock' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                <th class="cursor-pointer datatable-th datatable-th-sortable{% if sort_field == 'stock' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
                     data-col="stock"
                     hx-get="{% url 'inventory:products_list' %}?sort=stock&dir={% if sort_field == 'stock' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                     hx-target="#datatable-body"
-                    hx-include="#products-datatable"
-                    style="cursor: pointer;">
+                    hx-include="#products-datatable">
                     {% trans "Stock" %}
                     <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
                 </th>

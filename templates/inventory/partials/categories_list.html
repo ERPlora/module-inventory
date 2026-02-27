@@ -48,21 +48,19 @@
                         <span class="checkbox-mark"></span>
                     </label>
                 </th>
-                <th class="datatable-th datatable-th-sortable{% if sort_field == 'name' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                <th class="cursor-pointer datatable-th datatable-th-sortable{% if sort_field == 'name' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
                     hx-get="{% url 'inventory:categories_index' %}?sort=name&dir={% if sort_field == 'name' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                     hx-target="#datatable-body"
-                    hx-include="#categories-datatable"
-                    style="cursor: pointer;">
+                    hx-include="#categories-datatable">
                     {% trans "Category" %}
                     <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
                 </th>
                 <th class="datatable-th" data-col="description">{% trans "Description" %}</th>
-                <th class="datatable-th datatable-th-sortable{% if sort_field == 'sort_order' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                <th class="cursor-pointer datatable-th datatable-th-sortable{% if sort_field == 'sort_order' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
                     data-col="order"
                     hx-get="{% url 'inventory:categories_index' %}?sort=sort_order&dir={% if sort_field == 'sort_order' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
                     hx-target="#datatable-body"
-                    hx-include="#categories-datatable"
-                    style="cursor: pointer;">
+                    hx-include="#categories-datatable">
                     {% trans "Order" %}
                     <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
                 </th>
