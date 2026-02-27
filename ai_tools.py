@@ -262,6 +262,98 @@ class AdjustStock(AssistantTool):
 
 
 @register_tool
+class BulkAdjustStock(AssistantTool):
+    name = "bulk_adjust_stock"
+    description = (
+        "Adjust stock for multiple products at once (e.g., from a delivery "
+        "note/albarán). Provide a list of items with product reference "
+        "(name, SKU, or barcode) and quantity received."
+    )
+    module_id = "inventory"
+    required_permission = "inventory.change_product"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "reference": {
+                            "type": "string",
+                            "description": "Product name, SKU, or barcode",
+                        },
+                        "quantity": {
+                            "type": "integer",
+                            "description": "Quantity to add (positive) or subtract (negative)",
+                        },
+                    },
+                    "required": ["reference", "quantity"],
+                },
+                "description": "List of products and quantities to adjust",
+            },
+            "reason": {
+                "type": "string",
+                "description": "Reason for adjustment (e.g., 'Delivery note #12345')",
+            },
+        },
+        "required": ["items", "reason"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        from inventory.models import Product, StockMovement
+
+        items = args.get('items', [])
+        reason = args.get('reason', 'Bulk adjustment')
+        adjusted = []
+        not_found = []
+
+        for item in items:
+            ref = item.get('reference', '').strip()
+            qty = item.get('quantity', 0)
+            if not ref or not qty:
+                not_found.append({"reference": ref, "reason": "Empty reference or zero quantity"})
+                continue
+
+            # Search by SKU (exact), EAN13 (exact), then name (case-insensitive contains)
+            product = (
+                Product.objects.filter(sku__iexact=ref).first()
+                or Product.objects.filter(ean13=ref).first()
+                or Product.objects.filter(name__iexact=ref).first()
+                or Product.objects.filter(name__icontains=ref).first()
+            )
+
+            if not product:
+                not_found.append({"reference": ref, "reason": "Product not found"})
+                continue
+
+            movement_type = 'in' if qty > 0 else 'adjustment'
+            StockMovement.objects.create(
+                product=product,
+                movement_type=movement_type,
+                quantity=abs(qty),
+                reference=reason,
+            )
+            product.stock += qty
+            product.save(update_fields=['stock'])
+            adjusted.append({
+                "reference": ref,
+                "product_name": product.name,
+                "sku": product.sku,
+                "quantity": qty,
+                "new_stock": product.stock,
+            })
+
+        return {
+            "adjusted": adjusted,
+            "not_found": not_found,
+            "summary": f"{len(adjusted)} products adjusted, {len(not_found)} not found",
+        }
+
+
+@register_tool
 class GetStockAlerts(AssistantTool):
     name = "get_stock_alerts"
     description = "Get products that are below their low stock threshold."
