@@ -97,6 +97,10 @@ class CreateProduct(AssistantTool):
     module_id = "inventory"
     required_permission = "inventory.change_product"
     requires_confirmation = True
+    examples = [
+        {"name": "Champú Pro 500ml", "price": "12.50", "stock": 50, "sku": "CHAMP-001"},
+        {"name": "Tinte Rubio Ceniza", "price": "8.90", "cost": "4.50", "stock": 30},
+    ]
     parameters = {
         "type": "object",
         "properties": {
@@ -272,6 +276,9 @@ class BulkAdjustStock(AssistantTool):
     module_id = "inventory"
     required_permission = "inventory.change_product"
     requires_confirmation = True
+    examples = [
+        {"items": [{"reference": "CHAMP-001", "quantity": 24}, {"reference": "Tinte Rubio", "quantity": 12}], "reason": "Delivery note #1234"},
+    ]
     parameters = {
         "type": "object",
         "properties": {
