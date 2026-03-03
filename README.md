@@ -4,7 +4,7 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/cpos-plugins/cpos-plugin-products)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Django](https://img.shields.io/badge/django-5.1.x-green.svg)](https://www.djangoproject.com/)
+[![Django](https://img.shields.io/badge/django-6.0.x-green.svg)](https://www.djangoproject.com/)
 
 ## 🌟 Features
 
@@ -23,7 +23,7 @@
 ## 📋 Requirements
 
 - **CPOS**: >= 1.0.0
-- **Django**: 5.1.x
+- **Django**: 6.0.x
 - **Python**: >= 3.10
 - **Dependencies**:
   - Pillow >= 10.0.0 (for image processing)

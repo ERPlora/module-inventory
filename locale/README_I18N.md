@@ -286,7 +286,7 @@ print(gettext('Product'))  # → "Product"
 
 ## Recursos Adicionales
 
-- [Django i18n Documentation](https://docs.djangoproject.com/en/5.0/topics/i18n/)
+- [Django i18n Documentation](https://docs.djangoproject.com/en/6.0/topics/i18n/)
 - [gettext Format Specification](https://www.gnu.org/software/gettext/manual/gettext.html)
 - [Babel (Python i18n library)](http://babel.pocoo.org/)
 

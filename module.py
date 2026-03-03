@@ -36,3 +36,28 @@ PERMISSIONS = [
     'inventory.view_reports',
     'inventory.manage_settings',
 ]
+
+ROLE_PERMISSIONS = {
+    "admin": ["*"],
+    "manager": [
+        "add_category",
+        "add_product",
+        "add_stockmovement",
+        "add_warehouse",
+        "change_category",
+        "change_product",
+        "change_warehouse",
+        "view_category",
+        "view_product",
+        "view_reports",
+        "view_stockmovement",
+        "view_warehouse",
+    ],
+    "employee": [
+        "add_product",
+        "view_category",
+        "view_product",
+        "view_stockmovement",
+        "view_warehouse",
+    ],
+}
