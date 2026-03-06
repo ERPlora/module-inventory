@@ -124,7 +124,7 @@ class CreateProduct(AssistantTool):
             name=args['name'],
             sku=args.get('sku', ''),
             price=Decimal(args['price']),
-            cost=Decimal(args['cost']) if args.get('cost') else None,
+            cost=Decimal(args['cost']) if args.get('cost') else Decimal('0.00'),
             description=args.get('description', ''),
             stock=args.get('stock', 0),
             low_stock_threshold=args.get('low_stock_threshold', 0),
