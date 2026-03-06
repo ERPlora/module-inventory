@@ -98,8 +98,8 @@ class CreateProduct(AssistantTool):
     required_permission = "inventory.change_product"
     requires_confirmation = True
     examples = [
-        {"name": "Champú Pro 500ml", "price": "12.50", "stock": 50, "sku": "CHAMP-001"},
-        {"name": "Tinte Rubio Ceniza", "price": "8.90", "cost": "4.50", "stock": 30},
+        {"name": "Champú Pro 500ml", "price": "12.50", "stock": 50, "sku": "CHAMP-001", "category_names": ["Champús"]},
+        {"name": "Tinte Rubio Ceniza", "price": "8.90", "cost": "4.50", "stock": 30, "category_names": ["Tintes"]},
     ]
     parameters = {
         "type": "object",
@@ -112,6 +112,7 @@ class CreateProduct(AssistantTool):
             "stock": {"type": "integer", "description": "Initial stock quantity"},
             "low_stock_threshold": {"type": "integer", "description": "Low stock alert threshold"},
             "category_ids": {"type": "array", "items": {"type": "string"}, "description": "Category IDs to assign"},
+            "category_names": {"type": "array", "items": {"type": "string"}, "description": "Category names to assign (alternative to category_ids, matched case-insensitive)"},
         },
         "required": ["name", "price"],
         "additionalProperties": False,
@@ -132,6 +133,16 @@ class CreateProduct(AssistantTool):
         if args.get('category_ids'):
             cats = Category.objects.filter(id__in=args['category_ids'])
             p.categories.set(cats)
+        elif args.get('category_names'):
+            cats = Category.objects.filter(name__in=args['category_names'])
+            if not cats.exists():
+                # Try case-insensitive match
+                for name in args['category_names']:
+                    cat = Category.objects.filter(name__iexact=name).first()
+                    if cat:
+                        p.categories.add(cat)
+            else:
+                p.categories.set(cats)
         return {"id": str(p.id), "name": p.name, "sku": p.sku, "created": True}
 
 
