@@ -1,135 +1,118 @@
-# Products Manager Plugin
+# Inventory Module
 
-**Comprehensive product and inventory management plugin for CPOS**
+Comprehensive product and inventory management for ERPlora Hub.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/cpos-plugins/cpos-plugin-products)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Django](https://img.shields.io/badge/django-6.0.x-green.svg)](https://www.djangoproject.com/)
+## Features
 
-## 🌟 Features
+- Full CRUD for products and categories
+- Product types: physical (affects stock) and service
+- Product variants with custom attributes (color, size, weight)
+- Multi-warehouse stock management with stock levels per product-warehouse pair
+- Stock movements audit trail (in, out, adjustment, transfer, return, sale)
+- Low stock alerts with configurable thresholds per product
+- Tax class inheritance: Product > Category > StoreConfig default
+- SKU auto-generation and EAN-13 barcode support
+- Barcode generation (Code128/EAN13) and native print support
+- Image upload for products and categories with letter fallback
+- CSV and Excel import/export for products and categories
+- Bulk actions (activate, deactivate, delete)
+- Profit margin calculations (cost vs price)
+- Search, filtering, and pagination
 
-- ✅ **Product Management**: Full CRUD operations for products
-- ✅ **Category System**: Organize products with customizable categories
-- ✅ **Image Support**: Upload images for products and categories with letter fallback
-- ✅ **Multi-Language**: Built-in support for English and Spanish
-- ✅ **Import/Export**: CSV and Excel support for bulk operations
-- ✅ **Stock Management**: Track inventory with low stock alerts
-- ✅ **Search & Pagination**: Fast product search with pagination
-- ✅ **Profit Calculations**: Automatic profit margin calculations
-- ✅ **Avatar System**: Beautiful avatars with image or letter fallback
-- ✅ **Barcode Generation**: Generate Code128/EAN13 barcodes for products
-- ✅ **Native Printing**: Print barcodes using OS native dialogs in packaged app
+## Installation
 
-## 📋 Requirements
+This module is installed automatically via the ERPlora Marketplace.
 
-- **CPOS**: >= 1.0.0
-- **Django**: 6.0.x
-- **Python**: >= 3.10
-- **Dependencies**:
-  - Pillow >= 10.0.0 (for image processing)
-  - openpyxl >= 3.1.0 (for Excel import/export)
+## Configuration
 
-## 🚀 Installation
+Access settings via: **Menu > Inventory > Settings**
 
-### Via GitHub (Recommended for separate repos)
+Settings include:
+- Allow negative stock
+- Low stock alerts toggle
+- Auto-generate SKU toggle
+- Barcode generation toggle
 
-```bash
-cd /path/to/cpos/plugins/
-git clone https://github.com/cpos-plugins/cpos-plugin-products.git products
-cd products
-pip install -r requirements.txt
-python ../../manage.py migrate
-python ../../manage.py compilemessages
-```
+## Usage
 
-## 📦 Barcode Generation & Printing
+Access via: **Menu > Inventory**
 
-### Server-Side Barcode Generation
+### Views
 
-Barcodes are generated server-side using `python-barcode` library with SVG output:
+| View | URL | Description |
+|------|-----|-------------|
+| Dashboard | `/m/inventory/` | Overview of inventory metrics and stock alerts |
+| Products | `/m/inventory/products/` | List, create, edit, and delete products |
+| Product Add | `/m/inventory/products/add/` | Create new product |
+| Product Edit | `/m/inventory/products/<id>/edit/` | Edit existing product |
+| Categories | `/m/inventory/categories/` | Manage product categories |
+| Category Add | `/m/inventory/categories/add/` | Create new category |
+| Reports | `/m/inventory/reports/` | Inventory reports |
+| Settings | `/m/inventory/settings/` | Module configuration |
 
-```python
-# barcode_utils.py
-from barcode import Code128
-from barcode.writer import SVGWriter
+### Actions
 
-def generate_barcode_svg(sku, format_type='code128'):
-    """Generate SVG barcode from SKU"""
-    barcode_class = barcode.get_barcode_class('code128')
-    output = io.BytesIO()
-    barcode_instance = barcode_class(sku, writer=SVGWriter())
-    barcode_instance.write(output, {
-        'module_width': 0.3,
-        'module_height': 10,
-        'font_size': 10,
-        'text_distance': 5,
-        'quiet_zone': 6.5,
-    })
-    output.seek(0)
-    return output.read().decode('utf-8')
-```
+| Action | URL | Method |
+|--------|-----|--------|
+| Product Toggle Status | `/m/inventory/products/<id>/toggle/` | POST |
+| Products Bulk Action | `/m/inventory/products/bulk/` | POST |
+| Products Import | `/m/inventory/products/import/` | POST |
+| Generate Barcode | `/m/inventory/products/<id>/barcode/` | GET |
+| Category Toggle Status | `/m/inventory/categories/<id>/toggle/` | POST |
+| Categories Bulk Action | `/m/inventory/categories/bulk/` | POST |
+| Categories Import | `/m/inventory/categories/import/` | POST |
 
-**Supported formats:**
-- `code128`: Most flexible, accepts alphanumeric (default)
-- `ean13`: Requires 12 or 13 digits
+## Models
 
-### Native Print Support (PyWebView)
+| Model | Description |
+|-------|-------------|
+| `InventorySettings` | Per-hub settings (negative stock, low stock alerts, auto SKU, barcode) |
+| `Category` | Product category with icon, color, image, tax class, sort order |
+| `Product` | Product with SKU, EAN-13, price, cost, stock, type (physical/service), tax class |
+| `ProductVariant` | Variant of a product with custom attributes, separate SKU, price, and stock |
+| `Warehouse` | Physical or logical storage location with code and default flag |
+| `StockLevel` | Denormalized stock count per product-warehouse pair |
+| `StockMovement` | Audit trail for every stock change (in, out, adjustment, transfer, return, sale) |
+| `StockAlert` | Alert when product falls below low-stock threshold (active, acknowledged, resolved) |
 
-When running as packaged app with PyWebView, barcode printing uses native OS dialogs:
+## Permissions
 
-**JavaScript Detection:**
-```javascript
-async function printBarcode(containerId) {
-    const svg = container.querySelector('svg');
+| Permission | Description |
+|------------|-------------|
+| `inventory.view_product` | View products |
+| `inventory.add_product` | Create products |
+| `inventory.change_product` | Edit products |
+| `inventory.delete_product` | Delete products |
+| `inventory.view_category` | View categories |
+| `inventory.add_category` | Create categories |
+| `inventory.change_category` | Edit categories |
+| `inventory.delete_category` | Delete categories |
+| `inventory.view_warehouse` | View warehouses |
+| `inventory.add_warehouse` | Create warehouses |
+| `inventory.change_warehouse` | Edit warehouses |
+| `inventory.view_stockmovement` | View stock movements |
+| `inventory.add_stockmovement` | Create stock movements |
+| `inventory.view_reports` | View reports |
+| `inventory.manage_settings` | Manage module settings |
 
-    // Check if running in pywebview (packaged app)
-    if (window.pywebview && window.pywebview.api && window.pywebview.api.print_barcode) {
-        // Use native API
-        const result = await window.pywebview.api.print_barcode(svg.outerHTML);
-        if (result.success) {
-            showToast('Barcode sent to printer', 'success');
-        }
-    } else {
-        // Fallback for browser development (window.open + window.print)
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(htmlContent);
-        printWindow.print();
-    }
-}
-```
+## Integration with Other Modules
 
-**Python API (main.py):**
-```python
-class WindowAPI:
-    def print_barcode(self, svg_content):
-        """Open native print dialog with barcode"""
-        import tempfile
-        import subprocess
+| Module | Integration |
+|--------|-------------|
+| `sales` | Stock deduction on sale (StockMovement type=sale) |
+| `customers` | Customer assignment |
+| `invoicing` | Invoice generation from sales |
+| `cash_register` | Cash session management |
+| `configuration` | TaxClass inheritance for products and categories |
 
-        # Create temporary HTML file with SVG
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
-            f.write(f"<html><body>{svg_content}</body></html>")
-            temp_path = f.name
+## Dependencies
 
-        # Open with native browser
-        if sys.platform == 'darwin':
-            subprocess.run(['open', '-a', 'Safari', temp_path])
-        elif sys.platform == 'win32':
-            os.startfile(temp_path)
-        else:
-            subprocess.run(['xdg-open', temp_path])
+None
 
-        return {'success': True, 'message': 'Barcode opened. Use Cmd+P/Ctrl+P to print.'}
-```
+## License
 
-**Features:**
-- ✅ Native OS print dialogs (macOS, Windows, Linux)
-- ✅ Automatic fallback to browser method in development
-- ✅ No external dependencies required
-- ✅ Works with PyInstaller packaged app
+MIT
 
-## 🔗 Links
+## Author
 
-- **Repository Structure**: Each plugin should have its own GitHub repository
-- **Plugin Registry**: https://github.com/cpos-plugins (organization)
-- **Documentation**: https://docs.erplora.com/plugins/
+ERPlora Team - support@erplora.com
