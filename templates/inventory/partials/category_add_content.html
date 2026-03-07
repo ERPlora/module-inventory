@@ -1,0 +1,92 @@
+{% load djicons i18n %}
+<div data-back-url="{% url 'inventory:dashboard' %}" hidden></div>
+
+<div class="p-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">{% trans "Add Category" %}</h1>
+        <div class="flex gap-2">
+            <a class="btn btn-ghost btn-sm"
+               hx-get="{% url 'inventory:dashboard' %}"
+               hx-target="#main-content-area"
+               hx-push-url="true">
+                {% trans "Cancel" %}
+            </a>
+            <button type="submit" form="add-category-form" class="btn btn-sm color-primary">
+                {% icon "checkmark-outline" %}
+                {% trans "Save" %}
+            </button>
+        </div>
+    </div>
+
+        {% if error %}
+        <div class="callout callout-error">
+            <div class="callout-content">
+                <span class="callout-text">{{ error }}</span>
+            </div>
+        </div>
+        {% endif %}
+    <!-- Form -->
+    <form id="add-category-form"
+          hx-post="{% url 'inventory:category_add' %}"
+          hx-encoding="multipart/form-data" class="max-w-2xl">
+        {% csrf_token %}
+        <div class="card mb-4">
+            <div class="card-body flex flex-col gap-4">
+                <!-- Name -->
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Name" %}</label>
+                <input type="text" name="name" class="input input-sm w-full"
+                placeholder="{% trans 'Category name' %}" required>
+                </div>
+
+                <!-- Description -->
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Description" %}</label>
+                <textarea name="description" class="textarea textarea-sm w-full" rows="2"
+                placeholder="{% trans 'Optional description' %}"></textarea>
+                </div>
+
+                <!-- Icon & Color -->
+                <div class="grid grid-cols-2 gap-3">
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Icon" %}</label>
+                <input type="text" name="icon" class="input input-sm w-full"
+                placeholder="cube-outline" value="cube-outline">
+                </div>
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Color" %}</label>
+                <input type="color" name="color" class="input input-sm w-full"
+                value="#3880ff">
+                </div>
+                </div>
+
+                <!-- Sort Order -->
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Sort Order" %}</label>
+                <input type="number" name="sort_order" class="input input-sm w-full"
+                min="0" value="0">
+                </div>
+
+                <!-- Tax Class -->
+                {% if tax_classes %}
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Default Tax Class" %}</label>
+                <select name="tax_class" class="select select-sm w-full">
+                <option value="">{% trans "None" %}</option>
+                {% for tc in tax_classes %}
+                <option value="{{ tc.id }}">{{ tc.name }} ({{ tc.rate }}%)</option>
+                {% endfor %}
+                </select>
+                </div>
+                {% endif %}
+
+                <!-- Image -->
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Image" %}</label>
+                <input type="file" name="image" accept="image/*" class="input input-sm w-full">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

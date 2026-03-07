@@ -8,7 +8,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         {% for product in products %}
         <div class="card glass cursor-pointer hover:shadow-lg transition-shadow"
-             @click="openPanel('{% url 'inventory:product_edit' product.id %}')">
+             hx-get="{% url 'inventory:product_edit' product.id %}" hx-target="#main-content-area" hx-push-url="true">
             <div class="card-body">
                 <div class="flex items-center gap-3">
                     {% if product.image %}
@@ -106,7 +106,7 @@
                 </td>
                 <td class="datatable-td" data-label="{% trans 'Product' %}">
                     <div class="flex items-center gap-3 cursor-pointer"
-                         @click="openPanel('{% url 'inventory:product_edit' product.id %}')">
+                         hx-get="{% url 'inventory:product_edit' product.id %}" hx-target="#main-content-area" hx-push-url="true">
                         {% if product.image %}
                         <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
                             <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
@@ -152,7 +152,7 @@
                 <td class="datatable-td datatable-td-actions" onclick="event.stopPropagation();">
                     <div class="datatable-row-actions">
                         <button class="datatable-row-action"
-                                @click="openPanel('{% url 'inventory:product_edit' product.id %}')"
+                                hx-get="{% url 'inventory:product_edit' product.id %}" hx-target="#main-content-area" hx-push-url="true"
                                 title="{% trans 'Edit' %}">
                             {% icon "create-outline" %}
                         </button>
@@ -247,7 +247,7 @@
     </div>
     {% if not search_query and not category_filter and not status_filter %}
     <button class="btn color-primary mt-4"
-            @click="openPanel('{% url 'inventory:product_add' %}')">
+            hx-get="{% url 'inventory:product_add' %}" hx-target="#main-content-area" hx-push-url="true">
         {% icon "add-outline" %}
         {% trans "Add First Product" %}
     </button>

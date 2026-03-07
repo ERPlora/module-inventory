@@ -8,7 +8,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         {% for category in categories %}
         <div class="card glass cursor-pointer hover:shadow-lg transition-shadow"
-             @click="openPanel('{% url 'inventory:category_edit' category.id %}')">
+             hx-get="{% url 'inventory:category_edit' category.id %}" hx-target="#main-content-area" hx-push-url="true">
             <div class="card-body">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -83,7 +83,7 @@
                 </td>
                 <td class="datatable-td" data-label="{% trans 'Category' %}">
                     <div class="flex items-center gap-3 cursor-pointer"
-                         @click="openPanel('{% url 'inventory:category_edit' category.id %}')">
+                         hx-get="{% url 'inventory:category_edit' category.id %}" hx-target="#main-content-area" hx-push-url="true">
                         <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
                              style="background-color: {{ category.color }}20; color: {{ category.color }};">
                             {% icon category.icon %}
@@ -113,7 +113,7 @@
                 <td class="datatable-td datatable-td-actions" onclick="event.stopPropagation();">
                     <div class="datatable-row-actions">
                         <button class="datatable-row-action"
-                                @click="openPanel('{% url 'inventory:category_edit' category.id %}')"
+                                hx-get="{% url 'inventory:category_edit' category.id %}" hx-target="#main-content-area" hx-push-url="true"
                                 title="{% trans 'Edit' %}">
                             {% icon "create-outline" %}
                         </button>
@@ -208,7 +208,7 @@
     </div>
     {% if not search_query and not status_filter %}
     <button class="btn color-primary mt-4"
-            @click="openPanel('{% url 'inventory:category_add' %}')">
+            hx-get="{% url 'inventory:category_add' %}" hx-target="#main-content-area" hx-push-url="true">
         {% icon "add-outline" %}
         {% trans "Add First Category" %}
     </button>

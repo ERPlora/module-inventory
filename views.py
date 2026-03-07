@@ -12,6 +12,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum, F
 from django.http import HttpResponse, JsonResponse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, render as django_render
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -267,6 +268,7 @@ def products_list(request):
 # ---------------------------------------------------------------------------
 
 @login_required
+@htmx_view('inventory/pages/product_add.html', 'inventory/partials/product_add_content.html')
 def product_add(request):
     """Add product — renders in side panel via HTMX."""
     hub_id = request.session.get('hub_id')
@@ -281,7 +283,7 @@ def product_add(request):
         price_str = request.POST.get('price', '').strip()
 
         if not name or not sku or not price_str:
-            return django_render(request, 'inventory/partials/panel_product_add.html', {
+            return django_render(request, 'inventory/partials/product_add_content.html', {
                 'categories_list': categories_list,
                 'tax_classes': tax_classes,
                 'error': str(_('Name, SKU and Price are required')),
@@ -313,15 +315,18 @@ def product_add(request):
         if cat_ids:
             product.categories.set(cat_ids)
 
-        return _render_products_list(request, hub_id)
+        response = HttpResponse(status=204)
+        response['HX-Redirect'] = reverse('inventory:products_list')
+        return response
 
-    return django_render(request, 'inventory/partials/panel_product_add.html', {
+    return {
         'categories_list': categories_list,
         'tax_classes': tax_classes,
-    })
+    }
 
 
 @login_required
+@htmx_view('inventory/pages/product_edit.html', 'inventory/partials/product_edit_content.html')
 def product_edit(request, pk):
     """Edit product — renders in side panel via HTMX."""
     hub_id = request.session.get('hub_id')
@@ -337,7 +342,7 @@ def product_edit(request, pk):
         price_str = request.POST.get('price', '').strip()
 
         if not name or not sku or not price_str:
-            return django_render(request, 'inventory/partials/panel_product_edit.html', {
+            return django_render(request, 'inventory/partials/product_edit_content.html', {
                 'product': product,
                 'categories_list': categories_list,
                 'tax_classes': tax_classes,
@@ -370,11 +375,11 @@ def product_edit(request, pk):
 
         return _render_products_list(request, hub_id)
 
-    return django_render(request, 'inventory/partials/panel_product_edit.html', {
+    return {
         'product': product,
         'categories_list': categories_list,
         'tax_classes': tax_classes,
-    })
+    }
 
 
 @login_required
@@ -596,6 +601,7 @@ def categories_index(request):
 # ---------------------------------------------------------------------------
 
 @login_required
+@htmx_view('inventory/pages/category_add.html', 'inventory/partials/category_add_content.html')
 def category_add(request):
     """Add category — renders in side panel via HTMX."""
     hub_id = request.session.get('hub_id')
@@ -605,7 +611,7 @@ def category_add(request):
         name = request.POST.get('name', '').strip()
 
         if not name:
-            return django_render(request, 'inventory/partials/panel_category_add.html', {
+            return django_render(request, 'inventory/partials/category_add_content.html', {
                 'tax_classes': tax_classes,
                 'error': str(_('Name is required')),
             })
@@ -631,12 +637,13 @@ def category_add(request):
         category.save()
         return _render_categories_list(request, hub_id)
 
-    return django_render(request, 'inventory/partials/panel_category_add.html', {
+    return {
         'tax_classes': tax_classes,
-    })
+    }
 
 
 @login_required
+@htmx_view('inventory/pages/category_edit.html', 'inventory/partials/category_edit_content.html')
 def category_edit(request, pk):
     """Edit category — renders in side panel via HTMX."""
     hub_id = request.session.get('hub_id')
@@ -647,7 +654,7 @@ def category_edit(request, pk):
         name = request.POST.get('name', '').strip()
 
         if not name:
-            return django_render(request, 'inventory/partials/panel_category_edit.html', {
+            return django_render(request, 'inventory/partials/category_edit_content.html', {
                 'category': category,
                 'tax_classes': tax_classes,
                 'error': str(_('Name is required')),
@@ -671,10 +678,10 @@ def category_edit(request, pk):
         category.save()
         return _render_categories_list(request, hub_id)
 
-    return django_render(request, 'inventory/partials/panel_category_edit.html', {
+    return {
         'category': category,
         'tax_classes': tax_classes,
-    })
+    }
 
 
 @login_required
