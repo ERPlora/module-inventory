@@ -114,6 +114,19 @@
                 </div>
                 {% endif %}
 
+                <!-- Allergens (EU RD 126/2015) -->
+                <div>
+                <label class="text-sm font-medium mb-1 block">{% trans "Allergens" %}</label>
+                <div class="flex flex-wrap gap-2">
+                    {% for code, label in allergen_choices %}
+                    <label class="flex items-center gap-1 text-sm cursor-pointer">
+                        <input type="checkbox" name="allergens" value="{{ code }}" class="checkbox checkbox-sm">
+                        {{ label }}
+                    </label>
+                    {% endfor %}
+                </div>
+                </div>
+
                 <!-- Description -->
                 <div>
                 <label class="text-sm font-medium mb-1 block">{% trans "Description" %}</label>

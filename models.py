@@ -186,6 +186,31 @@ class Product(HubBaseModel):
         blank=True,
         null=True,
     )
+
+    # EU Allergens (RD 126/2015 — 14 official allergens)
+    ALLERGEN_CHOICES = [
+        ('gluten', _('Gluten')),
+        ('crustaceans', _('Crustaceans')),
+        ('eggs', _('Eggs')),
+        ('fish', _('Fish')),
+        ('peanuts', _('Peanuts')),
+        ('soy', _('Soy')),
+        ('dairy', _('Dairy')),
+        ('nuts', _('Tree nuts')),
+        ('celery', _('Celery')),
+        ('mustard', _('Mustard')),
+        ('sesame', _('Sesame')),
+        ('sulphites', _('Sulphites')),
+        ('lupin', _('Lupin')),
+        ('molluscs', _('Molluscs')),
+    ]
+    allergens = models.JSONField(
+        _('Allergens'),
+        default=list,
+        blank=True,
+        help_text=_('List of allergen codes (e.g. ["gluten", "dairy", "eggs"]).'),
+    )
+
     is_active = models.BooleanField(_('Active'), default=True)
 
     class Meta(HubBaseModel.Meta):
@@ -210,6 +235,16 @@ class Product(HubBaseModel):
     @property
     def is_low_stock(self):
         return self.stock <= self.low_stock_threshold
+
+    @property
+    def allergen_names(self):
+        """Return display names for active allergens."""
+        mapping = dict(self.ALLERGEN_CHOICES)
+        return [str(mapping.get(a, a)) for a in (self.allergens or [])]
+
+    @property
+    def has_allergens(self):
+        return bool(self.allergens)
 
     @property
     def profit_margin(self):

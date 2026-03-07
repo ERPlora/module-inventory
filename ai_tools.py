@@ -398,3 +398,48 @@ class GetStockAlerts(AssistantTool):
             ],
             "total": low.count(),
         }
+
+
+@register_tool
+class SetProductAllergens(AssistantTool):
+    name = "set_product_allergens"
+    description = (
+        "Set allergens for a product. Uses EU standard 14 allergens (RD 126/2015): "
+        "gluten, crustaceans, eggs, fish, peanuts, soy, dairy, nuts, celery, "
+        "mustard, sesame, sulphites, lupin, molluscs."
+    )
+    module_id = "inventory"
+    required_permission = "inventory.change_product"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "product_id": {"type": "string", "description": "Product ID"},
+            "allergens": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of allergen codes (e.g. ['gluten', 'dairy', 'eggs']). Pass empty list to clear.",
+            },
+        },
+        "required": ["product_id", "allergens"],
+        "additionalProperties": False,
+    }
+
+    VALID_ALLERGENS = {
+        'gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soy',
+        'dairy', 'nuts', 'celery', 'mustard', 'sesame', 'sulphites',
+        'lupin', 'molluscs',
+    }
+
+    def execute(self, args, request):
+        from inventory.models import Product
+        product = Product.objects.get(id=args['product_id'])
+        allergens = [a for a in args['allergens'] if a in self.VALID_ALLERGENS]
+        product.allergens = allergens
+        product.save(update_fields=['allergens', 'updated_at'])
+        return {
+            "product": product.name,
+            "allergens": allergens,
+            "allergen_names": product.allergen_names,
+            "updated": True,
+        }

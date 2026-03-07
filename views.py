@@ -286,6 +286,7 @@ def product_add(request):
             return django_render(request, 'inventory/partials/product_add_content.html', {
                 'categories_list': categories_list,
                 'tax_classes': tax_classes,
+                'allergen_choices': Product.ALLERGEN_CHOICES,
                 'error': str(_('Name, SKU and Price are required')),
             })
 
@@ -309,6 +310,7 @@ def product_add(request):
         if 'image' in request.FILES:
             product.image = request.FILES['image']
 
+        product.allergens = request.POST.getlist('allergens')
         product.save()
 
         cat_ids = request.POST.getlist('categories')
@@ -322,6 +324,7 @@ def product_add(request):
     return {
         'categories_list': categories_list,
         'tax_classes': tax_classes,
+        'allergen_choices': Product.ALLERGEN_CHOICES,
     }
 
 
@@ -346,6 +349,7 @@ def product_edit(request, pk):
                 'product': product,
                 'categories_list': categories_list,
                 'tax_classes': tax_classes,
+                'allergen_choices': Product.ALLERGEN_CHOICES,
                 'error': str(_('Name, SKU and Price are required')),
             })
 
@@ -368,6 +372,7 @@ def product_edit(request, pk):
         if 'image' in request.FILES:
             product.image = request.FILES['image']
 
+        product.allergens = request.POST.getlist('allergens')
         product.save()
 
         cat_ids = request.POST.getlist('categories')
@@ -379,6 +384,7 @@ def product_edit(request, pk):
         'product': product,
         'categories_list': categories_list,
         'tax_classes': tax_classes,
+        'allergen_choices': Product.ALLERGEN_CHOICES,
     }
 
 

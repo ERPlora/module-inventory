@@ -46,12 +46,19 @@ class CategoryForm(forms.ModelForm):
 
 
 class ProductForm(forms.ModelForm):
+    allergens = forms.MultipleChoiceField(
+        choices=Product.ALLERGEN_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False,
+        label=_('Allergens'),
+    )
+
     class Meta:
         model = Product
         fields = [
             'name', 'sku', 'ean13', 'description', 'product_type',
             'price', 'cost', 'stock', 'low_stock_threshold',
-            'categories', 'tax_class', 'image', 'is_active',
+            'categories', 'tax_class', 'image', 'allergens', 'is_active',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -105,6 +112,11 @@ class ProductForm(forms.ModelForm):
                 'class': 'toggle',
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.allergens:
+            self.initial['allergens'] = self.instance.allergens
 
 
 class ProductVariantForm(forms.ModelForm):

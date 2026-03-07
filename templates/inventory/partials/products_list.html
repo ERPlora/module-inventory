@@ -36,6 +36,13 @@
                         {% trans "Stock:" %} {{ product.stock }}
                     </span>
                 </div>
+                {% if product.has_allergens %}
+                <div class="flex flex-wrap gap-1 mt-1">
+                    {% for name in product.allergen_names %}
+                    <span class="badge badge-sm">{{ name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
