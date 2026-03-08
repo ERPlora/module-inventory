@@ -56,6 +56,11 @@ class Category(HubBaseModel):
     """Product category."""
 
     name = models.CharField(_('Name'), max_length=100)
+    code = models.CharField(
+        _('Code'), max_length=100, blank=True, default='',
+        db_index=True,
+        help_text=_('Unique code for blueprint seed categories'),
+    )
     slug = models.SlugField(_('Slug'), max_length=100, blank=True)
     icon = models.CharField(
         _('Icon'),
@@ -130,6 +135,11 @@ class Product(HubBaseModel):
         PHYSICAL = 'physical', _('Physical Product')
         SERVICE = 'service', _('Service')
 
+    class ProductSource(models.TextChoices):
+        USER = 'user', _('User Created')
+        BLUEPRINT = 'blueprint', _('Blueprint Seed')
+        IMPORT = 'import', _('Imported')
+
     name = models.CharField(_('Name'), max_length=255)
     sku = models.CharField(_('SKU'), max_length=100)
     ean13 = models.CharField(
@@ -146,6 +156,11 @@ class Product(HubBaseModel):
         choices=ProductType.choices,
         default=ProductType.PHYSICAL,
         help_text=_('Physical products affect stock, services do not.'),
+    )
+    source = models.CharField(
+        _('Source'), max_length=20,
+        choices=ProductSource.choices,
+        default=ProductSource.USER,
     )
     price = models.DecimalField(
         _('Price'),
