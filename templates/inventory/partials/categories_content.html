@@ -263,19 +263,19 @@
             </div>
             <div class="modal-body">
                 <label class="flex items-center gap-3 py-2 cursor-not-allowed opacity-50">
-                    <input type="checkbox" class="checkbox checkbox-sm" checked disabled>
+                    <input type="checkbox" class="checkbox-input" checked disabled>
                     <span class="text-sm">{% trans "Category" %}</span>
                 </label>
                 <label class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleCol('description')">
-                    <input type="checkbox" class="checkbox checkbox-sm" :checked="cols.description" readonly>
+                    <input type="checkbox" class="checkbox-input" :checked="cols.description" readonly>
                     <span class="text-sm">{% trans "Description" %}</span>
                 </label>
                 <label class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleCol('order')">
-                    <input type="checkbox" class="checkbox checkbox-sm" :checked="cols.order" readonly>
+                    <input type="checkbox" class="checkbox-input" :checked="cols.order" readonly>
                     <span class="text-sm">{% trans "Order" %}</span>
                 </label>
                 <label class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleCol('status')">
-                    <input type="checkbox" class="checkbox checkbox-sm" :checked="cols.status" readonly>
+                    <input type="checkbox" class="checkbox-input" :checked="cols.status" readonly>
                     <span class="text-sm">{% trans "Status" %}</span>
                 </label>
             </div>

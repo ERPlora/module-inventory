@@ -86,13 +86,47 @@
         </div>
 
         <!-- Categories -->
-        <div>
+        <div x-data="{ open: false, selected: [], labels: {} }" x-init="
+            {% for cat in categories_list %}labels['{{ cat.id }}'] = '{{ cat.name }}';{% endfor %}
+        ">
             <label class="text-sm font-medium mb-1 block">{% trans "Categories" %}</label>
-            <select name="categories" class="select select-sm w-full" multiple>
-                {% for cat in categories_list %}
-                <option value="{{ cat.id }}">{{ cat.name }}</option>
-                {% endfor %}
-            </select>
+            <button type="button" class="select-modal select-modal-sm w-full" @click="open = true">
+                <span class="select-modal-placeholder" x-show="selected.length === 0">{% trans "Select categories..." %}</span>
+                <span class="select-modal-tags" x-show="selected.length > 0">
+                    <template x-for="id in selected" :key="id">
+                        <span class="select-modal-tag">
+                            <span x-text="labels[id]"></span>
+                            <span class="select-modal-tag-remove" @click.stop="selected = selected.filter(t => t !== id)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </span>
+                        </span>
+                    </template>
+                </span>
+            </button>
+            <template x-for="id in selected" :key="id">
+                <input type="hidden" name="categories" :value="id">
+            </template>
+            <div class="modal-backdrop" :data-state="open ? 'open' : 'closed'" @click.self="open = false">
+                <div class="modal modal-sm">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{% trans "Categories" %}</h3>
+                        <button type="button" class="modal-close" @click="open = false">&times;</button>
+                    </div>
+                    <div class="modal-body p-0">
+                        {% for cat in categories_list %}
+                        <label class="select-modal-option" :class="selected.includes('{{ cat.id }}') && 'select-modal-option-selected'">
+                            <input type="checkbox" class="checkbox-input" value="{{ cat.id }}" x-model="selected">
+                            <span class="checkbox-box"><svg class="checkbox-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            <span class="select-modal-option-label">{{ cat.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-ghost btn-sm" @click="selected = []; open = false">{% trans "Clear" %}</button>
+                        <button type="button" class="btn btn-sm color-primary" @click="open = false">{% trans "Done" %}</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Tax Class -->
