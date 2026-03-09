@@ -140,6 +140,15 @@ class Product(HubBaseModel):
         BLUEPRINT = 'blueprint', _('Blueprint Seed')
         IMPORT = 'import', _('Imported')
 
+    class UnitOfMeasure(models.TextChoices):
+        UNIT = 'unit', _('Unit')
+        KG = 'kg', _('Kilogram')
+        G = 'g', _('Gram')
+        L = 'l', _('Litre')
+        ML = 'ml', _('Millilitre')
+        M = 'm', _('Metre')
+        CM = 'cm', _('Centimetre')
+
     name = models.CharField(_('Name'), max_length=255)
     sku = models.CharField(_('SKU'), max_length=100)
     ean13 = models.CharField(
@@ -161,6 +170,18 @@ class Product(HubBaseModel):
         _('Source'), max_length=20,
         choices=ProductSource.choices,
         default=ProductSource.USER,
+    )
+    unit_of_measure = models.CharField(
+        _('Unit of Measure'),
+        max_length=10,
+        choices=UnitOfMeasure.choices,
+        default=UnitOfMeasure.UNIT,
+        help_text=_('How this product is measured and sold.'),
+    )
+    sold_by_weight = models.BooleanField(
+        _('Sold by Weight/Measure'),
+        default=False,
+        help_text=_('Requires entering weight/quantity at the POS before adding to cart.'),
     )
     price = models.DecimalField(
         _('Price'),

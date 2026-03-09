@@ -57,6 +57,7 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             'name', 'sku', 'ean13', 'description', 'product_type',
+            'unit_of_measure', 'sold_by_weight',
             'price', 'cost', 'stock', 'low_stock_threshold',
             'categories', 'tax_class', 'image', 'allergens', 'is_active',
         ]
@@ -80,6 +81,12 @@ class ProductForm(forms.ModelForm):
             }),
             'product_type': forms.Select(attrs={
                 'class': 'select',
+            }),
+            'unit_of_measure': forms.Select(attrs={
+                'class': 'select',
+            }),
+            'sold_by_weight': forms.CheckboxInput(attrs={
+                'class': 'toggle',
             }),
             'price': forms.NumberInput(attrs={
                 'class': 'input',
