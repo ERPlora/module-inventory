@@ -29,7 +29,7 @@
     <!-- Form -->
     <form id="edit-category-form"
               hx-post="{% url 'inventory:category_edit' category.id %}"
-              hx-encoding="multipart/form-data" class="max-w-2xl">
+              hx-encoding="multipart/form-data">
         {% csrf_token %}
         <div class="card mb-4">
             <div class="card-body flex flex-col gap-4">
