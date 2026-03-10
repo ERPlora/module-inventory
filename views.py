@@ -45,7 +45,7 @@ CATEGORY_SORT_FIELDS = {
     'sort_order': 'sort_order',
 }
 
-PER_PAGE_CHOICES = [10, 25, 50, 100]
+PER_PAGE_CHOICES = [12, 24, 48, 96, 0]
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ def _build_products_context(hub_id, per_page=10):
     products = Product.objects.filter(
         hub_id=hub_id, is_deleted=False,
     ).prefetch_related('categories').order_by('name')
-    paginator = Paginator(products, per_page)
+    paginator = Paginator(products, per_page if per_page > 0 else max(products.count(), 1))
     page_obj = paginator.get_page(1)
     categories_list = Category.objects.filter(
         hub_id=hub_id, is_deleted=False, is_active=True,
@@ -91,7 +91,7 @@ def _build_categories_context(hub_id, per_page=10):
     categories = Category.objects.filter(
         hub_id=hub_id, is_deleted=False,
     ).order_by('sort_order', 'name')
-    paginator = Paginator(categories, per_page)
+    paginator = Paginator(categories, per_page if per_page > 0 else max(categories.count(), 1))
     page_obj = paginator.get_page(1)
     return {
         'categories': page_obj,
@@ -171,9 +171,9 @@ def products_list(request):
     status_filter = request.GET.get('status', '')
     page_number = request.GET.get('page', 1)
     current_view = request.GET.get('view', 'table')
-    per_page = int(request.GET.get('per_page', 10))
+    per_page = int(request.GET.get('per_page', 12))
     if per_page not in PER_PAGE_CHOICES:
-        per_page = 10
+        per_page = 12
 
     queryset = Product.objects.filter(
         hub_id=hub_id, is_deleted=False,
@@ -232,7 +232,7 @@ def products_list(request):
             sheet_name=str(_('Products')),
         )
 
-    paginator = Paginator(queryset, per_page)
+    paginator = Paginator(queryset, per_page if per_page > 0 else max(queryset.count(), 1))
     page_obj = paginator.get_page(page_number)
 
     categories_list = Category.objects.filter(
@@ -530,9 +530,9 @@ def categories_index(request):
     status_filter = request.GET.get('status', '')
     page_number = request.GET.get('page', 1)
     current_view = request.GET.get('view', 'table')
-    per_page = int(request.GET.get('per_page', 10))
+    per_page = int(request.GET.get('per_page', 12))
     if per_page not in PER_PAGE_CHOICES:
-        per_page = 10
+        per_page = 12
 
     queryset = Category.objects.filter(hub_id=hub_id, is_deleted=False)
 
@@ -577,7 +577,7 @@ def categories_index(request):
             sheet_name=str(_('Categories')),
         )
 
-    paginator = Paginator(queryset, per_page)
+    paginator = Paginator(queryset, per_page if per_page > 0 else max(queryset.count(), 1))
     page_obj = paginator.get_page(page_number)
 
     context = {
