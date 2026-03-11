@@ -33,15 +33,6 @@
         {% csrf_token %}
         <div class="card mb-4">
             <div class="card-body flex flex-col gap-4">
-                <!-- Image Preview -->
-                {% if product.image %}
-                <div class="text-center mb-2">
-                <div class="w-20 h-20 rounded-lg overflow-hidden mx-auto">
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
-                </div>
-                </div>
-                {% endif %}
-
                 <!-- Name -->
                 <div>
                 <label class="text-sm font-medium mb-1 block">{% trans "Name" %}</label>
@@ -182,7 +173,7 @@
                 <!-- Image -->
                 <div>
                 <label class="text-sm font-medium mb-1 block">{% trans "Image" %}</label>
-                <input type="file" name="image" accept="image/*" class="input input-sm w-full">
+                {% if product.image %}{% include "core/components/media_picker.html" with field_name="image" current_url=product.image.url folder="products" %}{% else %}{% include "core/components/media_picker.html" with field_name="image" folder="products" %}{% endif %}
                 </div>
             </div>
         </div>

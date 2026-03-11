@@ -24,6 +24,7 @@ from apps.core.services import export_to_csv, export_to_excel
 from apps.core.services.import_service import parse_import_file, ImportResult
 from apps.modules_runtime.navigation import with_module_nav
 from apps.configuration.models import HubConfig, StoreConfig, TaxClass
+from apps.core.media_helpers import handle_image_field
 
 from .models import Category, Product, InventorySettings
 
@@ -307,8 +308,7 @@ def product_add(request):
         if tax_class_id:
             product.tax_class = TaxClass.objects.filter(id=tax_class_id, is_active=True).first()
 
-        if 'image' in request.FILES:
-            product.image = request.FILES['image']
+        handle_image_field(request, product, 'image')
 
         product.allergens = request.POST.getlist('allergens')
         product.save()
@@ -369,8 +369,7 @@ def product_edit(request, pk):
         else:
             product.tax_class = None
 
-        if 'image' in request.FILES:
-            product.image = request.FILES['image']
+        handle_image_field(request, product, 'image')
 
         product.allergens = request.POST.getlist('allergens')
         product.save()
@@ -637,8 +636,7 @@ def category_add(request):
             tax_class=tax_class,
         )
 
-        if 'image' in request.FILES:
-            category.image = request.FILES['image']
+        handle_image_field(request, category, 'image')
 
         category.save()
         return _render_categories_list(request, hub_id)
@@ -678,8 +676,7 @@ def category_edit(request, pk):
         else:
             category.tax_class = None
 
-        if 'image' in request.FILES:
-            category.image = request.FILES['image']
+        handle_image_field(request, category, 'image')
 
         category.save()
         return _render_categories_list(request, hub_id)

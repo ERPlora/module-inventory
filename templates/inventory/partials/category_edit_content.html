@@ -92,12 +92,7 @@
                 <!-- Image -->
                 <div>
                 <label class="text-sm font-medium mb-1 block">{% trans "Image" %}</label>
-                {% if category.image %}
-                <div class="mb-2">
-                <img src="{{ category.image.url }}" alt="{{ category.name }}" class="w-20 h-20 rounded-lg object-cover">
-                </div>
-                {% endif %}
-                <input type="file" name="image" accept="image/*" class="input input-sm w-full">
+                {% if category.image %}{% include "core/components/media_picker.html" with field_name="image" current_url=category.image.url folder="categories" %}{% else %}{% include "core/components/media_picker.html" with field_name="image" folder="categories" %}{% endif %}
                 </div>
             </div>
         </div>

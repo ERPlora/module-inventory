@@ -443,3 +443,165 @@ class SetProductAllergens(AssistantTool):
             "allergen_names": product.allergen_names,
             "updated": True,
         }
+
+
+@register_tool
+class ExportProductsCSV(AssistantTool):
+    name = "export_products_csv"
+    description = "Export products to a CSV file. Returns a download URL. Can filter by search term, category, or active status."
+    module_id = "inventory"
+    required_permission = "inventory.view_product"
+    parameters = {
+        "type": "object",
+        "properties": {
+            "search": {"type": "string", "description": "Search by name or SKU"},
+            "category_id": {"type": "string", "description": "Filter by category ID"},
+            "active_only": {"type": "boolean", "description": "Only export active products (default true)"},
+        },
+        "required": [],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        import os
+        import time
+        from django.conf import settings
+        from apps.core.services.export_service import generate_csv_string
+        from inventory.models import Product
+
+        qs = Product.objects.select_related('tax_class').all()
+        if args.get('search'):
+            from django.db.models import Q
+            s = args['search']
+            qs = qs.filter(Q(name__icontains=s) | Q(sku__icontains=s))
+        if args.get('category_id'):
+            qs = qs.filter(categories__id=args['category_id'])
+        if args.get('active_only', True):
+            qs = qs.filter(is_active=True)
+
+        # Build data with custom fields
+        data = []
+        for p in qs:
+            data.append({
+                'name': p.name,
+                'sku': p.sku,
+                'price': str(p.price),
+                'cost': str(p.cost) if p.cost else '',
+                'stock': p.stock,
+                'categories': ', '.join(c.name for c in p.categories.all()),
+                'tax_class': p.tax_class.name if p.tax_class else '',
+                'is_active': 'Yes' if p.is_active else 'No',
+            })
+
+        fields = ['name', 'sku', 'price', 'cost', 'stock', 'categories', 'tax_class', 'is_active']
+        headers = ['Name', 'SKU', 'Price', 'Cost', 'Stock', 'Categories', 'Tax Class', 'Active']
+
+        export_dir = os.path.join(settings.MEDIA_ROOT, 'exports')
+        os.makedirs(export_dir, exist_ok=True)
+        filename = f'products_{int(time.time())}.csv'
+        filepath = os.path.join(export_dir, filename)
+
+        csv_content = generate_csv_string(data, fields=fields, headers=headers)
+        with open(filepath, 'w', encoding='utf-8-sig') as f:
+            f.write(csv_content)
+
+        return {"download_url": f"/media/exports/{filename}", "count": len(data)}
+
+
+@register_tool
+class ImportProductsCSV(AssistantTool):
+    name = "import_products_csv"
+    description = (
+        "Import products from a CSV file uploaded by the user. "
+        "Expected columns: Name, SKU, Price, Cost, Stock, Categories, Tax Class. "
+        "Creates new products or skips if SKU already exists."
+    )
+    module_id = "inventory"
+    required_permission = "inventory.change_product"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "file_path": {"type": "string", "description": "Path to the uploaded CSV file"},
+        },
+        "required": ["file_path"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        import csv
+        import io
+        from decimal import Decimal, InvalidOperation
+        from inventory.models import Product, Category
+
+        file_path = args['file_path']
+
+        # Read the CSV file
+        try:
+            with open(file_path, 'r', encoding='utf-8-sig') as f:
+                content = f.read()
+        except FileNotFoundError:
+            return {"error": f"File not found: {file_path}"}
+
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+
+        if not rows:
+            return {"error": "CSV file is empty or has no data rows"}
+
+        created = 0
+        skipped = 0
+        errors = []
+
+        for i, row in enumerate(rows, start=2):
+            name = row.get('Name', row.get('name', '')).strip()
+            if not name:
+                errors.append(f"Row {i}: missing product name")
+                continue
+
+            sku = row.get('SKU', row.get('sku', '')).strip()
+            if sku and Product.objects.filter(sku=sku).exists():
+                skipped += 1
+                continue
+
+            try:
+                price = Decimal(row.get('Price', row.get('price', '0')).strip() or '0')
+            except (InvalidOperation, ValueError):
+                errors.append(f"Row {i}: invalid price")
+                continue
+
+            try:
+                cost = Decimal(row.get('Cost', row.get('cost', '0')).strip() or '0')
+            except (InvalidOperation, ValueError):
+                cost = Decimal('0.00')
+
+            try:
+                stock = int(row.get('Stock', row.get('stock', '0')).strip() or '0')
+            except (ValueError, TypeError):
+                stock = 0
+
+            product = Product.objects.create(
+                name=name,
+                sku=sku,
+                price=price,
+                cost=cost,
+                stock=stock,
+            )
+
+            # Map categories by name
+            cat_str = row.get('Categories', row.get('categories', '')).strip()
+            if cat_str:
+                cat_names = [c.strip() for c in cat_str.split(',') if c.strip()]
+                for cat_name in cat_names:
+                    cat = Category.objects.filter(name__iexact=cat_name).first()
+                    if cat:
+                        product.categories.add(cat)
+
+            created += 1
+
+        return {
+            "created": created,
+            "skipped": skipped,
+            "errors": errors[:20],
+            "total_rows": len(rows),
+        }
