@@ -5,16 +5,34 @@ from assistant.tools import AssistantTool, register_tool
 @register_tool
 class ListProducts(AssistantTool):
     name = "list_products"
-    description = "List products with optional filters. Returns name, SKU, price, stock, category."
+    description = (
+        "Use this to browse or search the product catalog. "
+        "Returns product name, SKU, price, cost, current stock, low-stock threshold, and product type. "
+        "Read-only — no side effects. "
+        "For full details (description, allergens, EAN13, categories), use get_product. "
+        "Example triggers: 'what products do we have?', 'search for champú', 'show low stock items'"
+    )
     module_id = "inventory"
     required_permission = "inventory.view_product"
     parameters = {
         "type": "object",
         "properties": {
-            "search": {"type": "string", "description": "Search by name or SKU"},
-            "category_id": {"type": "string", "description": "Filter by category ID"},
-            "low_stock": {"type": "boolean", "description": "Only show products below low stock threshold"},
-            "limit": {"type": "integer", "description": "Max results (default 20)"},
+            "search": {
+                "type": "string",
+                "description": "Filter by product name or SKU (case-insensitive partial match).",
+            },
+            "category_id": {
+                "type": "string",
+                "description": "Filter by category ID. Use list_categories to get category IDs.",
+            },
+            "low_stock": {
+                "type": "boolean",
+                "description": "Set to true to return only products at or below their low-stock threshold. Omit or set false for all products.",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of products to return. Default is 20.",
+            },
         },
         "required": [],
         "additionalProperties": False,
@@ -53,14 +71,26 @@ class ListProducts(AssistantTool):
 @register_tool
 class GetProduct(AssistantTool):
     name = "get_product"
-    description = "Get detailed info for a specific product by ID or SKU."
+    description = (
+        "Use this to get the complete details of a single product: name, SKU, EAN13 barcode, "
+        "description, price, cost, stock level, low-stock threshold, product type, categories, "
+        "tax class, and allergens. "
+        "Read-only — no side effects. "
+        "Provide either product_id (UUID) or sku. Use list_products to find an ID or SKU first."
+    )
     module_id = "inventory"
     required_permission = "inventory.view_product"
     parameters = {
         "type": "object",
         "properties": {
-            "product_id": {"type": "string", "description": "Product ID"},
-            "sku": {"type": "string", "description": "Product SKU"},
+            "product_id": {
+                "type": "string",
+                "description": "Internal UUID of the product.",
+            },
+            "sku": {
+                "type": "string",
+                "description": "Product SKU code (exact match).",
+            },
         },
         "required": [],
         "additionalProperties": False,
@@ -93,7 +123,13 @@ class GetProduct(AssistantTool):
 @register_tool
 class CreateProduct(AssistantTool):
     name = "create_product"
-    description = "Create a new product in inventory."
+    description = (
+        "Use this to add a new product to the inventory catalog. "
+        "SIDE EFFECT: creates a new product record. Requires confirmation. "
+        "Price is required; SKU is optional but recommended for stock tracking. "
+        "Categories can be specified by ID (preferred) or by name (case-insensitive lookup). "
+        "Use list_categories to find valid category IDs or names before calling this."
+    )
     module_id = "inventory"
     required_permission = "inventory.change_product"
     requires_confirmation = True
@@ -104,15 +140,44 @@ class CreateProduct(AssistantTool):
     parameters = {
         "type": "object",
         "properties": {
-            "name": {"type": "string", "description": "Product name"},
-            "sku": {"type": "string", "description": "SKU code"},
-            "price": {"type": "string", "description": "Sale price"},
-            "cost": {"type": "string", "description": "Cost price"},
-            "description": {"type": "string", "description": "Product description"},
-            "stock": {"type": "integer", "description": "Initial stock quantity"},
-            "low_stock_threshold": {"type": "integer", "description": "Low stock alert threshold"},
-            "category_ids": {"type": "array", "items": {"type": "string"}, "description": "Category IDs to assign"},
-            "category_names": {"type": "array", "items": {"type": "string"}, "description": "Category names to assign (alternative to category_ids, matched case-insensitive)"},
+            "name": {
+                "type": "string",
+                "description": "Product display name.",
+            },
+            "sku": {
+                "type": "string",
+                "description": "Unique SKU code for stock tracking. Optional but recommended.",
+            },
+            "price": {
+                "type": "string",
+                "description": "Sale price as a decimal string (e.g., '12.50'). Required.",
+            },
+            "cost": {
+                "type": "string",
+                "description": "Purchase/cost price as a decimal string (e.g., '6.00'). Used for margin calculations.",
+            },
+            "description": {
+                "type": "string",
+                "description": "Optional product description or notes.",
+            },
+            "stock": {
+                "type": "integer",
+                "description": "Initial stock quantity. Defaults to 0.",
+            },
+            "low_stock_threshold": {
+                "type": "integer",
+                "description": "Stock level at which a low-stock alert is triggered. Defaults to 0 (no alert).",
+            },
+            "category_ids": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of category UUIDs to assign. Preferred over category_names.",
+            },
+            "category_names": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of category names to assign (case-insensitive lookup). Use when you don't have IDs.",
+            },
         },
         "required": ["name", "price"],
         "additionalProperties": False,
@@ -149,20 +214,47 @@ class CreateProduct(AssistantTool):
 @register_tool
 class UpdateProduct(AssistantTool):
     name = "update_product"
-    description = "Update an existing product's fields."
+    description = (
+        "Use this to modify an existing product's fields (name, price, cost, description, stock, or low-stock threshold). "
+        "SIDE EFFECT: updates the product record. Requires confirmation. "
+        "Only the fields you provide are changed; omitted fields remain unchanged. "
+        "Use get_product or list_products to find the product_id before calling this. "
+        "To adjust stock with a reason/audit trail, prefer adjust_stock instead of setting stock directly here."
+    )
     module_id = "inventory"
     required_permission = "inventory.change_product"
     requires_confirmation = True
     parameters = {
         "type": "object",
         "properties": {
-            "product_id": {"type": "string", "description": "Product ID to update"},
-            "name": {"type": "string", "description": "New name"},
-            "price": {"type": "string", "description": "New price"},
-            "cost": {"type": "string", "description": "New cost"},
-            "description": {"type": "string", "description": "New description"},
-            "stock": {"type": "integer", "description": "New stock quantity"},
-            "low_stock_threshold": {"type": "integer", "description": "New threshold"},
+            "product_id": {
+                "type": "string",
+                "description": "UUID of the product to update. Required.",
+            },
+            "name": {
+                "type": "string",
+                "description": "New product name.",
+            },
+            "price": {
+                "type": "string",
+                "description": "New sale price as a decimal string (e.g., '15.00').",
+            },
+            "cost": {
+                "type": "string",
+                "description": "New cost price as a decimal string.",
+            },
+            "description": {
+                "type": "string",
+                "description": "New product description.",
+            },
+            "stock": {
+                "type": "integer",
+                "description": "Override the stock quantity directly. Prefer adjust_stock for audited adjustments.",
+            },
+            "low_stock_threshold": {
+                "type": "integer",
+                "description": "New low-stock alert threshold. Set to 0 to disable the alert.",
+            },
         },
         "required": ["product_id"],
         "additionalProperties": False,
@@ -191,7 +283,11 @@ class UpdateProduct(AssistantTool):
 @register_tool
 class ListCategories(AssistantTool):
     name = "list_categories"
-    description = "List product categories."
+    description = (
+        "Use this to see all product categories with their IDs, names, slugs, and product counts. "
+        "Read-only — no side effects. "
+        "Call this before create_product or list_products when you need category IDs or names."
+    )
     module_id = "inventory"
     required_permission = "inventory.view_product"
     parameters = {
@@ -215,16 +311,30 @@ class ListCategories(AssistantTool):
 @register_tool
 class CreateCategory(AssistantTool):
     name = "create_category"
-    description = "Create a new product category."
+    description = (
+        "Use this to create a new product category. "
+        "SIDE EFFECT: creates a new category record. Requires confirmation. "
+        "Call list_categories first to avoid duplicates. "
+        "The icon should be a valid ionicon name (e.g., 'cube-outline', 'pricetag-outline')."
+    )
     module_id = "inventory"
     required_permission = "inventory.change_product"
     requires_confirmation = True
     parameters = {
         "type": "object",
         "properties": {
-            "name": {"type": "string", "description": "Category name"},
-            "icon": {"type": "string", "description": "Icon name (ionicon)"},
-            "color": {"type": "string", "description": "Hex color code"},
+            "name": {
+                "type": "string",
+                "description": "Category name (e.g., 'Champús', 'Bebidas', 'Postres').",
+            },
+            "icon": {
+                "type": "string",
+                "description": "Ionicon name for visual identification (e.g., 'cube-outline', 'leaf-outline'). Optional.",
+            },
+            "color": {
+                "type": "string",
+                "description": "Hex color code for visual identification (e.g., '#3B82F6'). Optional.",
+            },
         },
         "required": ["name"],
         "additionalProperties": False,
@@ -245,16 +355,31 @@ class CreateCategory(AssistantTool):
 @register_tool
 class AdjustStock(AssistantTool):
     name = "adjust_stock"
-    description = "Create a stock adjustment for a product (increase or decrease)."
+    description = (
+        "Use this to increase or decrease the stock of a single product, with a reason recorded in the audit log. "
+        "SIDE EFFECT: creates a StockMovement record and updates product.stock. Requires confirmation. "
+        "Use positive quantity to add stock (e.g., receiving a delivery), negative to subtract (e.g., breakage, correction). "
+        "For adjusting multiple products at once, use bulk_adjust_stock. "
+        "Example triggers: 'add 24 units of product X', 'remove 5 units due to breakage'"
+    )
     module_id = "inventory"
     required_permission = "inventory.change_product"
     requires_confirmation = True
     parameters = {
         "type": "object",
         "properties": {
-            "product_id": {"type": "string", "description": "Product ID"},
-            "quantity": {"type": "integer", "description": "Quantity to adjust (positive=add, negative=subtract)"},
-            "reason": {"type": "string", "description": "Reason for adjustment"},
+            "product_id": {
+                "type": "string",
+                "description": "UUID of the product to adjust. Use list_products or get_product to find it.",
+            },
+            "quantity": {
+                "type": "integer",
+                "description": "Quantity change: positive to add stock (e.g., 24), negative to subtract (e.g., -5).",
+            },
+            "reason": {
+                "type": "string",
+                "description": "Human-readable reason recorded in the stock movement log (e.g., 'Delivery note #1234', 'Breakage', 'Inventory count correction').",
+            },
         },
         "required": ["product_id", "quantity"],
         "additionalProperties": False,
@@ -280,9 +405,11 @@ class AdjustStock(AssistantTool):
 class BulkAdjustStock(AssistantTool):
     name = "bulk_adjust_stock"
     description = (
-        "Adjust stock for multiple products at once (e.g., from a delivery "
-        "note/albarán). Provide a list of items with product reference "
-        "(name, SKU, or barcode) and quantity received."
+        "Use this to adjust stock for multiple products in a single operation — ideal for processing a delivery note (albarán). "
+        "Each item can be identified by SKU, EAN13 barcode, or product name (exact or partial). "
+        "SIDE EFFECT: creates StockMovement records and updates stock for each matched product. Requires confirmation. "
+        "Returns a list of adjusted products and any references that could not be matched. "
+        "For single-product adjustments, use adjust_stock instead."
     )
     module_id = "inventory"
     required_permission = "inventory.change_product"
@@ -300,20 +427,20 @@ class BulkAdjustStock(AssistantTool):
                     "properties": {
                         "reference": {
                             "type": "string",
-                            "description": "Product name, SKU, or barcode",
+                            "description": "Product identifier: SKU (exact), EAN13 barcode (exact), or product name (case-insensitive, partial match as fallback).",
                         },
                         "quantity": {
                             "type": "integer",
-                            "description": "Quantity to add (positive) or subtract (negative)",
+                            "description": "Quantity to add (positive) or subtract (negative).",
                         },
                     },
                     "required": ["reference", "quantity"],
                 },
-                "description": "List of products and quantities to adjust",
+                "description": "List of products and quantities to adjust.",
             },
             "reason": {
                 "type": "string",
-                "description": "Reason for adjustment (e.g., 'Delivery note #12345')",
+                "description": "Reason applied to all movements in this batch (e.g., 'Delivery note #12345', 'Monthly inventory count').",
             },
         },
         "required": ["items", "reason"],
@@ -374,7 +501,13 @@ class BulkAdjustStock(AssistantTool):
 @register_tool
 class GetStockAlerts(AssistantTool):
     name = "get_stock_alerts"
-    description = "Get products that are below their low stock threshold."
+    description = (
+        "Use this to identify products that need restocking. "
+        "Returns all products whose current stock is at or below their configured low-stock threshold. "
+        "Only products with a threshold greater than 0 are included. "
+        "Read-only — no side effects. "
+        "Example triggers: 'what needs restocking?', 'show me low stock alerts', 'what products are running out?'"
+    )
     module_id = "inventory"
     required_permission = "inventory.view_product"
     parameters = {
@@ -404,9 +537,12 @@ class GetStockAlerts(AssistantTool):
 class SetProductAllergens(AssistantTool):
     name = "set_product_allergens"
     description = (
-        "Set allergens for a product. Uses EU standard 14 allergens (RD 126/2015): "
-        "gluten, crustaceans, eggs, fish, peanuts, soy, dairy, nuts, celery, "
-        "mustard, sesame, sulphites, lupin, molluscs."
+        "Use this to set or update the allergen list for a product (EU standard 14 allergens per RD 126/2015). "
+        "SIDE EFFECT: overwrites the product's allergen list. Requires confirmation. "
+        "Pass an empty list to clear all allergens. "
+        "Valid allergen codes: gluten, crustaceans, eggs, fish, peanuts, soy, dairy, nuts, "
+        "celery, mustard, sesame, sulphites, lupin, molluscs. "
+        "Invalid codes are silently ignored."
     )
     module_id = "inventory"
     required_permission = "inventory.change_product"
@@ -414,11 +550,18 @@ class SetProductAllergens(AssistantTool):
     parameters = {
         "type": "object",
         "properties": {
-            "product_id": {"type": "string", "description": "Product ID"},
+            "product_id": {
+                "type": "string",
+                "description": "UUID of the product to update.",
+            },
             "allergens": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "List of allergen codes (e.g. ['gluten', 'dairy', 'eggs']). Pass empty list to clear.",
+                "description": (
+                    "List of allergen codes to set. Valid values: gluten, crustaceans, eggs, fish, "
+                    "peanuts, soy, dairy, nuts, celery, mustard, sesame, sulphites, lupin, molluscs. "
+                    "Pass an empty list [] to remove all allergens from the product."
+                ),
             },
         },
         "required": ["product_id", "allergens"],
@@ -448,15 +591,30 @@ class SetProductAllergens(AssistantTool):
 @register_tool
 class ExportProductsCSV(AssistantTool):
     name = "export_products_csv"
-    description = "Export products to a CSV file. Returns a download URL. Can filter by search term, category, or active status."
+    description = (
+        "Use this to generate a downloadable CSV of the product catalog. "
+        "Returns a download URL that the user can click to get the file. "
+        "The CSV includes: name, SKU, price, cost, stock, categories, tax class, and active status. "
+        "SIDE EFFECT: creates a file in the exports directory. "
+        "Example triggers: 'export all products to Excel', 'download the product list'"
+    )
     module_id = "inventory"
     required_permission = "inventory.view_product"
     parameters = {
         "type": "object",
         "properties": {
-            "search": {"type": "string", "description": "Search by name or SKU"},
-            "category_id": {"type": "string", "description": "Filter by category ID"},
-            "active_only": {"type": "boolean", "description": "Only export active products (default true)"},
+            "search": {
+                "type": "string",
+                "description": "Filter by product name or SKU (case-insensitive partial match).",
+            },
+            "category_id": {
+                "type": "string",
+                "description": "Filter by category ID to export only products in that category.",
+            },
+            "active_only": {
+                "type": "boolean",
+                "description": "If true (default), only active products are exported. Set to false to include inactive products.",
+            },
         },
         "required": [],
         "additionalProperties": False,
@@ -512,9 +670,13 @@ class ExportProductsCSV(AssistantTool):
 class ImportProductsCSV(AssistantTool):
     name = "import_products_csv"
     description = (
-        "Import products from a CSV file uploaded by the user. "
-        "Expected columns: Name, SKU, Price, Cost, Stock, Categories, Tax Class. "
-        "Creates new products or skips if SKU already exists."
+        "Use this to bulk-import products from a CSV file that the user has uploaded. "
+        "SIDE EFFECT: creates new product records. Requires confirmation. "
+        "Expected CSV columns: Name (required), SKU, Price, Cost, Stock, Categories (comma-separated), Tax Class. "
+        "Products with an SKU that already exists are skipped (not updated). "
+        "Categories are matched by name (case-insensitive); unmatched categories are ignored. "
+        "Returns counts of created, skipped, and error rows. "
+        "Only use this when the user provides or uploads a CSV file — do not guess a file_path."
     )
     module_id = "inventory"
     required_permission = "inventory.change_product"
@@ -522,7 +684,10 @@ class ImportProductsCSV(AssistantTool):
     parameters = {
         "type": "object",
         "properties": {
-            "file_path": {"type": "string", "description": "Path to the uploaded CSV file"},
+            "file_path": {
+                "type": "string",
+                "description": "Absolute path to the uploaded CSV file on the server (provided by the file upload system).",
+            },
         },
         "required": ["file_path"],
         "additionalProperties": False,
