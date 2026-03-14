@@ -222,6 +222,13 @@ class Product(HubBaseModel):
         blank=True,
         null=True,
     )
+    image_url = models.URLField(
+        _('Image URL'),
+        max_length=500,
+        blank=True,
+        default='',
+        help_text=_('External image URL (e.g. blueprint asset). Used when no local image is uploaded.'),
+    )
 
     # EU Allergens (RD 126/2015 — 14 official allergens)
     ALLERGEN_CHOICES = [
@@ -317,6 +324,8 @@ class Product(HubBaseModel):
     def get_image_path(self):
         if self.image:
             return self.image.url
+        if self.image_url:
+            return self.image_url
         return '/static/products/images/placeholder.png'
 
     def get_initial(self):
